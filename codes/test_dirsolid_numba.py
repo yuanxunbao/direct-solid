@@ -342,6 +342,9 @@ def rhs_psi(ps,ph,U,zz): return _rhs_psi(ps,ph,U,zz)
 def rhs_U(U,ph,psi_t): return _rhs_U(U,ph,psi_t)
 
 
+@njit(parallel=True)
+def atheta_cpu(ux,uy): return atheta(ux,uy)
+
 
 def save_data(phi,U):
     
@@ -364,7 +367,7 @@ psi = set_BC(psi, 0, 1)
 phi = np.tanh(psi/sqrt2)   # expensive replace
 U =   set_BC(U, 0, 1)
 Tishot[:,[0]] = save_data(phi,U)
-
+atheta_cpu(phi,phi)
 
 #complie
 start = time.time()
@@ -380,39 +383,46 @@ print('elapsed: ', end - start )
 
 start = time.time()
 
-for jj in range(nts):
+dPSI = rhs_psi(psi,phi,U,zz)
+set_BC(dPSI,0,1)
 
-    for ii in range(int(Mt/nts)):
+# for jj in range(nts):
 
+#    for ii in range(int(Mt/nts)):
 
-        dPSI = rhs_psi(psi, phi, U, zz - R_tilde*t)
+for jj in range(10000):
+    dPSI = rhs_psi(psi, phi, U, zz - R_tilde*t)
+#        ath = atheta_cpu(phi,phi)
+        
+    dPSI = set_BC(dPSI, 0, 1)
     
-    '''
-        dPSI = set_BC(dPSI, 0, 1)
-    
-        psi = psi + dt*dPSI 
+    psi = psi + dt*dPSI 
       
-        U = U + dt*rhs_U(U,phi,dPSI)
+    dU = rhs_U(U,phi,dPSI)
+    U = U + dt*rhs_U(U,phi,dPSI)
         
         # add boundary
-        psi = set_BC(psi, 0, 1)
+    psi = set_BC(psi, 0, 1)
     
-        U = set_BC(U, 0, 1)
+    U = set_BC(U, 0, 1)
         
-        phi = np.tanh(psi/sqrt2) 
+    phi = np.tanh(psi/sqrt2) 
         
         
-        t += dt
-
+    t += dt
+        
     #print('now time is ',t)  
-    Tishot[:,[jj+1]] = save_data(phi,U)
-    '''
+#    Tishot[:,[jj+1]] = save_data(phi,U)
+    
 end = time.time()
 
 
 print('elapsed: ', (end - start)/Mt )
 
 
+print(dPSI)
+print(np.max(U))
+print(np.min(psi))
 # Uf = U[1:-1,1:-1].T
-
+save('numba.mat',{'psi':psi,'U':U, 'dPSI':dPSI,'phi':phi})
 # save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1].T*W0,'y':Tishot,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start})
