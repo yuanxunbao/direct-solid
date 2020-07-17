@@ -596,10 +596,10 @@ bpg = math.ceil( np.max([nx,nz]) / tpb )
 
 print('(tpb,bpg) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-
+kts = int(Mt/nts)
 start2 = time.time()
 # two steps per loop
-for nt in range(5000):
+for nt in range(int(Mt/2)):
    
     # =================================================================
     # 1. rhs of psi
@@ -626,7 +626,12 @@ for nt in range(5000):
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI)
     
-
+    if (2*nt+2)%kts==0:  # data saving
+       kkk = int(np.floor((2*nt+2)/kts))
+       phi = phi_old.copy_to_host()
+       U  = U_old.copy_to_host()
+       order_param[:,[kkk]], conc[:,[kkk]] = save_data(phi,U)
+       
 
 
 #    cuda.synchronize()
@@ -696,13 +701,13 @@ for nt in range(5000):
 
 end2=time.time()
 
-phi = phi_old.copy_to_host()
-U   = U_old.copy_to_host()
-order_param[:,[1]], conc[:,[1]] = save_data(phi,U)
+#phi = phi_old.copy_to_host()
+#U   = U_old.copy_to_host()
+#order_param[:,[1]], conc[:,[1]] = save_data(phi,U)
 
 
 print('elapse2: ', (end2-start2))
 
-# save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \
-#     'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2,'dPSI':dPSI.copy_to_host() } )
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \
+     'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2,'dPSI':dPSI.copy_to_host() } )
 # save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1].T*W0,'y':Tishot,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start})
