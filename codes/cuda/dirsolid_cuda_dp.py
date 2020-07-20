@@ -11,6 +11,7 @@ import os
 from scipy.io import savemat as save
 from numba import njit, cuda, vectorize, float64, float64, int32
 import numpy as np
+import cupy as cp
 from numba.cuda.random import create_xoroshiro128p_states, xoroshiro128p_uniform_float64
 from numpy.random import random
 import time
@@ -67,7 +68,6 @@ sqrt2 = float64(np.sqrt(2.0))
 lx = float64(lxd/W0) # non-dimensionalize
 lz = float64(aratio*lx)
 nz = int32(aratio*nx+1)
-print(aratio*nx)
 nv= nz*nx #number of variables
 dx = float64( lx/nx )
 dz = float64( lz/(nz-1) ) 
@@ -77,6 +77,7 @@ zz,xx = np.meshgrid(z, x)
 
 
 dxdz_in = float64( 1./(dx*dz) ) 
+dxdz_in_sqrt = float64( np.sqrt(dxdz_in) )
 
 hi= float64( 1./dx )
 
@@ -86,21 +87,38 @@ dt_sqrt =  float64( np.sqrt(dt) )
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 
-z_tip = 1 	# global variable that stores the tip z-index
+cur_tip = 1	# global variable that stores the tip z-index
+sum_arr = np.array([0], dtype=np.float64) # init sum = 0
 tip_thres = np.int32(math.ceil(0.8*nz)) # threshold for moving the frame
 print('threshold = ', tip_thres)
 
 
-def update_tip(z_tip):
 
-    checktip = cp.mean(cp.take(phi_cp, z_tip, 1))
+@cuda.jit
+def sum_cur_tip(d_sum_arr, d_tip, d_phi):
 
-    while checktip > -0.99:
-
-        z_tip += 1
-        checktip = cp.mean(cp.take(phi_cp, z_tip, 1))
+    m,n = d_phi.shape
+    i = cuda.grid(1)
+    val = 0. 
+ 
+    if (0 < i < m-1):
+        val = d_phi[i, d_tip]
     
-    return z_tip
+    cuda.atomic.add(d_sum_arr, 0, val)
+
+
+def compute_tip_pos(cur_tip,sum_arr, phi):
+
+    while True :
+
+        sum_arr[0] = 0.
+        sum_cur_tip[bpg,tpb](sum_arr,  cur_tip, phi)
+        mean_along_z = sum_arr[0] / nx
+
+        if (mean_along_z > -0.99):
+            cur_tip += 1
+        else: 
+            return cur_tip
 
 @njit
 def set_halo(u):
@@ -133,7 +151,7 @@ def atheta(ux, uz):
         return a_s*( 1 + epsilon*(ux2**2 + uz2**2) / MAG_sq2   )
         # return uz/MAG_sq2
     else:
-        return a_s
+        return 1.0
     
     
 @cuda.jit('float64(float64, float64)',device=True)
@@ -305,7 +323,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, nt, rng_states):
         beta_ij = xoroshiro128p_uniform_float64(rng_states, threadID) - 0.5 # rand from  [-0.5, 0.5]
         
         # update psi and phi
-        ps_new[i,j] = ps[i,j] + ( dt * dpsi[i,j] + 0*dt_sqrt* eta * beta_ij ) 
+        ps_new[i,j] = ps[i,j] + ( dt * dpsi[i,j] + dt_sqrt*dxdz_in_sqrt*eta * beta_ij ) 
         ph_new[i,j] = math.tanh(ps_new[i,j]/sqrt2)
 
 
@@ -372,55 +390,6 @@ def setBC_gpu(ps,ph,U,dpsi):
         ph[i,n-1] = ph[i,n-3]
         U[i,n-1] = U[i,n-3]
         dpsi[i,n-1] = dpsi[i,n-3]
-
-
- 
-        
-'''
-@cuda.jit
-def setBC_gpu(u):
-    i,j = cuda.grid(2)
-    m,n = u.shape
-    
-    
-    if i == 0 and j < n :
-        u[i,j] = u[m-2,j] # periodic
-    
-    if i == m-1 and j < n :
-        u[i,j] = u[1,j] # periodic
-     
-    if j == 0 and i < m:
-        u[i,j] = u[i,2] # no-flux
-    
-    if j == n-1 and i < m:
-        u[i,j] = u[i, n-3] # no-flux 
-'''
-
-@cuda.jit
-def setBC_all(ps,ph,U):
-    i,j = cuda.grid(2)
-    m,n = ps.shape
-    
-    
-    if i == 0 and j < n :
-        ps[i,j] = ps[m-2,j] # periodic
-        ph[i,j] = ph[m-2,j] # periodic
-        U[i,j]  = U[m-2,j] # periodic
-
-    if i == m-1 and j < n :
-        ps[i,j] = ps[1,j] # periodic
-        ph[i,j] = ph[1,j] # periodic
-        U[i,j]  = U[1,j] # periodic
-     
-    if j == 0 and i < m:
-        ps[i,j] = ps[i,2] 
-        ph[i,j] = ph[i,2]
-        U[i,j]  = U[i,2] 
-
-    if j == n-1 and i < m:
-        ps[i,j] = ps[i,n-3] 
-        ph[i,j] = ph[i,n-3]
-        U[i,j]  = U[i,n-3] 
 
 
 @cuda.jit
@@ -508,19 +477,6 @@ def rhs_U(U, U_new, ph, dpsi):
         U_new[i,j] = U[i,j] + dt * ( rhs_U / tau_U )
 
 
-   
-
-@cuda.jit
-def update_phi_U(ps,ph,U,dU):
-
-    i,j = cuda.grid(2)
-    m,n = U.shape
-
-    if  i < m and j < n :
-        
-        ph[i,j] = math.tanh( ps[i,j] / sqrt2)
-        U[i,j] += dt * dU[i,j]
-
 
 
 def save_data(phi,U):
@@ -568,17 +524,8 @@ psi_new = cuda.device_array_like(psi_old)
 phi_new = cuda.device_array_like(phi_old)
 U_new = cuda.device_array_like(U_old)
 
-zz_gpu = cuda.to_device(zz)
-
 dPSI = cuda.device_array(psi_cpu.shape, dtype=np.float64)
-dU = cuda.device_array(U_cpu.shape, dtype=np.float64)
-
-# buffer on GPU to move frame
-psi_tmp = cuda.device_array(psi_cpu.shape, dtype=np.float64)
-phi_tmp = cuda.device_array(phi_cpu.shape, dtype=np.float64)
-U_tmp = cuda.device_array(U_cpu.shape, dtype=np.float64)
-zz_tmp = cuda.device_array(zz.shape, dtype=np.float64)
-
+zz_gpu  = cuda.to_device(zz)
 
 # CUDA kernel invocation parameters
 tpb2d = (16,16)
@@ -599,110 +546,61 @@ print('(tpb,bpg) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 start2 = time.time()
 # two steps per loop
-for nt in range(5000):
+for nt in range(int(Mt/2)):
    
     # =================================================================
-    # 1. rhs of psi
+    # time step: t = (2*nt) * dt
     # =================================================================
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, zz_gpu, dPSI, 2*nt, rng_states)
-    
- 
-    # =================================================================
-    # 2.set BC of dPSI, U_old, phi_new, psi_new
-    # ================================================================= 
-#    setBC_gpu[ blockspergrid, threadsperblock ](dPSI_cp)
-#    cuda.synchronize()
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
-    
-
-    # =================================================================
-    # 3.rhs of U, also update psi
-    # ================================================================= 
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
 
-
-    # 
+    # =================================================================
+    # time step: t = (2*nt+1) * dt
+    # ================================================================= 
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, zz_gpu, dPSI, 2*nt+1, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
-    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI)
-    
+    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
+    '''    
 
-
-
-#    cuda.synchronize()
-
-#    update_psi[ blockspergrid, threadsperblock ](psi_cp,dPSI_cp)
-#    cuda.synchronize()
-
-#    setBC_gpu[ blockspergrid, threadsperblock ](psi_cp)
-#    cuda.synchronize()
-    
-    # =================================================================
-    # 4. update U and phi
-    # ================================================================= 
-#    update_phi_U[ blockspergrid, threadsperblock ](psi_cp, phi_cp, U_cp, dU_cp)
-#    cuda.synchronize()
-  
-    
-    # =================================================================
-    # 5.set BC of psi, phi, U
-    # ================================================================= 
-#     setBC_all[ blockspergrid, threadsperblock ](psi_cp, phi_cp, U_cp)
-#    cuda.synchronize()
-
-    # find tip position    
-#    z_tip=update_tip(z_tip)
-#    cuda.synchronize()    
+    # update tip position    
+    cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
  
     # when tip hit tip_thres, shift down by 1
-#    if z_tip == tip_thres:
+    while cur_tip >= tip_thres:
 
-#        moveframe[ blockspergrid, threadsperblock ](psi_cp, phi_cp, U_cp, zz_cp, psi_buff, phi_buff, U_buff, zz_buff)
-#        cuda.synchronize()
-
-#        copyframe[ blockspergrid, threadsperblock ](psi_buff, phi_buff, U_buff, zz_buff, psi_cp, phi_cp, U_cp, zz_cp)
-#        cuda.synchronize()
-
-#        z_tip = z_tip-1
-
-
-    # =================================================================
-    # 5.set BC of psi, phi, U
-    # =================================================================
-#    setBC_all[ blockspergrid, threadsperblock ](psi_cp, phi_cp, U_cp)
-#    cuda.synchronize()
+        # new device arrays are used as buffer here, 
+        # dPSI are used as buffer for zz
+        moveframe[ bpg2d, tpb2d ](psi_old, phi_old, U_old, zz_gpu, psi_new, phi_new, U_new, dPSI)
+        copyframe[ bpg2d, tpb2d ](psi_new, phi_new, U_new, dPSI, psi_old, phi_old, U_old, zz_gpu)
+        
+        # once frame is moved, BC needs to be updated again
+        setBC_gpu[bpg,tpb]( psi_old, phi_old, U_old, dPSI  ) 
 
 
-    #setBC_gpu[ blockspergrid, threadsperblock ](phi_cp)
-    #cuda.synchronize()
+        cur_tip = cur_tip-1
 
-    #setBC_gpu[ blockspergrid, threadsperblock ](U_cp)
-    #cuda.synchronize() 
+    '''
+    
+    
+    if math.remainder(2*(nt+1) , Mt/nts)==0 :
 
-#    cuda.synchronize()
-#    if math.remainder(nt+1 , Mt/nts) == 0 :
-#        print('time step = ', nt+1 )
-#        print('tip position nz = ', z_tip)
+        print('time step = ', 2*(nt+1) )
+        print('tip position nz = ', cur_tip)
 
-#        phi = cp.asnumpy(phi_cp)
-#        U = cp.asnumpy(U_cp)
+        phi_old.copy_to_host(phi)
+        U_old.copy_to_host(U)
 
-#        print(phi.dtype)    
+        tk = np.int32(2*(nt+1)/(Mt/nts))
+        order_param[:,[tk]], conc[:,[tk]] = save_data(phi, U) 
 
-#        tk = np.int32((nt+1)/(Mt/nts))
-#        order_param[:,[tk]], conc[:,[tk]] = save_data(phi,U) 
 
-        # save data
 
 end2=time.time()
-
-phi = phi_old.copy_to_host()
-U   = U_old.copy_to_host()
-order_param[:,[1]], conc[:,[1]] = save_data(phi,U)
-
-
 print('elapse2: ', (end2-start2))
 
-# save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \
-#     'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2,'dPSI':dPSI.copy_to_host() } )
+
+
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \
+      'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2, 'dPSI':dPSI.copy_to_host() } )
 # save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1].T*W0,'y':Tishot,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start})
