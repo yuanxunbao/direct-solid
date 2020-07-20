@@ -1,159 +1,277 @@
-\documentclass[a4paper,12pt]{article}
-\usepackage{amsmath}
-\usepackage{amsfonts}
+%%% 
+%% Copyright 2007, 2008, 2009 Elsevier Ltd
+%% 
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.2 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%c%    http://www.latex-project.org/lppl.txt
+%% and version 1.2 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'Elsarticle Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for Elsevier's document class `elsarticle'
+%% with numbered style bibliographic references
+%% SP 2008/03/01
+
+%% \documentclass[preprint,review,11pt]{elsarticle}
+\documentclass[final,times]{elsarticle}
+
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
+%% for a journal layout:
+%\documentclass[final,1p,times]{elsarticle}
+%% \documentclass[final,1p,times,twocolumn]{elsarticle}
+%% \documentclass[final,3p,times]{elsarticle}
+%% \documentclass[final,3p,times,twocolumn]{elsarticle}
+%% \documentclass[final,5p,times]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn]{elsarticle}
+
+%% For including figures, graphicx.sty has been loaded in
+%% elsarticle.cls. If you prefer to use the old commands
+%% please give \usepackage{epsfig}
+
+%% The amssymb package provides various useful mathematical symbols
 \usepackage{amssymb}
-\usepackage{hyperref}
+%% The amsthm package provides extended theorem environments
+%% \usepackage{amsthm}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers.
+ \usepackage{lineno}
+
+\usepackage{amsmath,hyperref}
+\usepackage{mathrsfs}
+\usepackage{bbm}
+\usepackage{mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{multirow}
 \usepackage{subfig}
+\biboptions{numbers,sort&compress}
+
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+    \definecolor{gray}{gray}{0.85}
+
+
+
 \renewcommand{\figurename}{Fig.}
 \renewcommand*{\figureautorefname}{Fig.}
-\usepackage{graphicx}
+\renewcommand*{\subsectionautorefname}{Sec.}
+\renewcommand*{\sectionautorefname}{Sec.}
+\usepackage{subfig}
+\newcommand{\subfigureautorefname}{\figureautorefname}
 
-\graphicspath{[./images/]}
-\usepackage{float}
-\usepackage{multirow}
-\usepackage{placeins}
-\usepackage{color}
-\usepackage{array}
-\usepackage{cancel}
-\usepackage[margin=1in]{geometry}
-%\usepackage[left=1.5in, right=1.5in]{geometry}
-
-\usepackage[nameinlink,noabbrev]{cleveref}
-\crefname{equation}{eq.}{eqs.} % force abbreviated forms for equation "names"
-\Crefname{equation}{Eq.}{Eqs.}
-\crefname{figure}{fig.}{figs.}
-\Crefname{Figure}{Fig.}{Figs.}
-\usepackage{booktabs} % For prettier tables
+% equation numbering (section#. equation#)
+\numberwithin{equation}{section}
 
 
 
-%\usepackage{cmbright}
-%\renewcommand{\familydefault}{\sfdefault}
-
-\newcommand{\diff}{\mathrm{d}}
-\newcommand{\V}[1]{\boldsymbol{#1}}
+%% define macro
+\newcommand{\pStokeslet}{\mathbb{G}}
+\newcommand{\fStokeslet}{\mathbb{G}}
+\newcommand{\rStokeslet}{\mathbb{G}^{(r)}}
+\newcommand{\wStokeslet}{\mathbb{G}^{(w)}}
 \newcommand{\B}[1]{\mathbf{#1}}
-\newcommand{\myhat}[2]{\hat{#1}_{#2}}
-\renewcommand*\arraystretch{1.5}
-\renewcommand{\div}[1]{\nabla_{#1} \cdot}
-\newcommand{\lapl}{\nabla^2}
-\newcommand{\grad}[1]{\nabla_{#1}}
-\newcommand{\curl}{\nabla \times}
-\newcommand{\Tr}{\mathrm{Tr}}
-\newcommand{\op}[1]{\mathcal{#1}}
-
-
+\newcommand{\V}[1]{\boldsymbol{#1}}
+\newcommand{\op}[1]{\boldsymbol{\mathcal{#1}}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\D}[1]{\dot{#1}}
 \newcommand{\T}[1]{\tilde{#1}}
 \newcommand{\WT}[1]{\widetilde{#1}}
 
 
-\newcommand{\yxb}[1]{  {\bf \color{red}{ Bao: #1}} }
-\newcommand{\ygq}[1]{  {\bf \color{blue}{ Qin: #1}} }
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\myhat}[2]{\hat{#1}_{#2}}
+\renewcommand*\arraystretch{1.5}
+\renewcommand{\div}[1]{\nabla_{#1} \cdot}
+\newcommand{\ggrad}{\nabla^2}
+\newcommand{\lapl}[1]{\Delta_{#1}}
+\newcommand{\grad}[1]{\nabla_{#1}}
+\newcommand{\curl}{\nabla \times}
+\newcommand{\Tr}{\mathrm{Tr}}
 
-\DeclareMathAlphabet\mathbfcal{OMS}{cmsy}{b}{n}
+\newcommand{\dlapl}[2]{\Delta^{#1}_{#2}}
+\newcommand{\dgrad}[2]{\nabla^{#1}_{#2}}
+\newcommand{\ddiv}[2]{\nabla^{#1}_{#2} \cdot}
 
 
-\title{Directional Solidification Model for Additive Manufacturing Testbed Problem}
-\author{Yigong Qin and Yuanxun Bao}
-\date{\today}
+\newcommand{\Mwave}{\mbf{M}^{(w)}}
+\newcommand{\Mreal}{\mbf{M}^{(r)}}
+\newcommand{\sqrtM}{\mbf{M}^{1/2}}
+\newcommand{\sqrtMwave}{\left(\mbf{M}^{(w)}\right)^{1/2}}
+\newcommand{\sqrtMreal}{\left(\mbf{M}^{(r)}\right)^{1/2}}
 
+\newcommand{\xir}{\xi^2 r^2}
+\newcommand{\kxi}{k^2/4\xi^2}
+
+\newcommand{\kbt}{k_BT}
+\newcommand{\rcutoff}{r_c}
+\newcommand{\rAlpert}{r_{\text{Alpert}}}
+\newcommand{\Nbox}{N_{\text{box}}}
+\newcommand{\tolEwald}{\epsilon_{\text{Ewald}}}
+\newcommand{\tolIter}{\epsilon_{\text{tol}}}
+
+% revision macro
+\usepackage{color}
+\PassOptionsToPackage{normalem}{ulem}
+\usepackage{ulem}
+%\newcommand{\redadd}[1]{#1}
+\newcommand{\redadd}[1]{{\color{red}#1}}
+\newcommand{\reddelete}[1]{{\color{red}\sout{#1}}}
+\newcommand{\blueadd}[1]{{\color{blue}#1}}
+\newcommand{\bluedelete}[1]{{\color{blue}\sout{#1}}}
+\newcommand{\Donev}[1]{{{\bf \color{red}[#1]}}}
+\definecolor{mygreen}{rgb}{0,.6,0}
+\newcommand{\greenadd}[1]{{\color{mygreen}#1}}
+\newcommand{\eric}[1]{\textcolor{blue}{\textit{#1}}}
+\allowdisplaybreaks
+
+
+
+\usepackage[nameinlink,noabbrev]{cleveref}
+\crefname{equation}{eq.}{eqs.} % force abbreviated forms for equation "names"
+\Crefname{equation}{Eq.}{Eqs.}
+\crefname{figure}{fig.}{fiqs.}
+\Crefname{figure}{Fig.}{Figs.}
+\crefname{table}{tab.}{tabs.}
+\Crefname{table}{Tab.}{Tabs.}
+
+
+\def\appendixname{}
+
+
+\newtheorem{thm}{Lemma}[section] 
+\newtheorem{lem}[thm]{Lemma} 
+\newdefinition{rmk}{Remark}[section]
+\newproof{pf}{Proof}
+\newproof{pot}{Proof of Theorem \ref{thm2}}
+\newtheorem{type}{Type}
+
+
+
+
+
+
+% \usepackage[inline]{showlabels}
+
+
+% \journal{J. Comput. Phys.}
 
 \begin{document}
 
-\maketitle
+\begin{frontmatter}
 
-\section{Macroscopic heat transfer model}
-We model the macroscopic heat transfer in the rectangular domain 
-\begin{equation}
-\frac{\partial \rho c_{p} T}{ \partial t} = \div{} ( K \grad{} T) -\frac{\partial \rho L  f_l(T)}{\partial t} \quad \text{in }  \Omega
-\end{equation}
+%% Title, authors and addresses
 
-with boundary conditions 
-\begin{align}
-(-K \grad{} T) \cdot \hat{n} = -q_s + h(T - T_e) + \epsilon \sigma (T^4 - T_e^4)  & \quad \text{on } \Gamma_{top} \\
-(-K \grad{} T) \cdot \hat{n} = 0  & \quad \text{on } \Gamma  \backslash \Gamma_{top}
-\end{align}
-where $K$ is the heat conductivity, $\alpha$ is thermal diffusivity, $h$ is the convective heat transfer coefficient, $\epsilon$ is the thermal radiation coefficient, $\sigma$ is the Stefan-Boltzmann constant, and $L$ is the latent heat. The liquid fraction $f_l$ is assumed to vary linearly with temperature in the mushy zone:
-\begin{equation}
-f_l(T) =
-\left\{
-\begin{array}{cc}
-1 & T>T_l \\
-\frac{T-T_s}{T_l - T_s} & T_s \leq T \leq T_l \\
-0 & T < T_s
-\end{array}
-\right.
-\end{equation}
-where $T_l$ and $T_s$ are the liquidus and solidus temperature, respectively.
-The heat source $q_S$ is modeled as a moving Gaussian
-\begin{equation}
-q_s(x, t ) = \frac{2Q\eta}{\pi r_b^2} \exp \left( -\frac{ 2(x-V_s t)^2}{ r_b^2} \right),
-\end{equation}
-where $Q$ is the source of heat power, $\eta$ is the absorption coefficient, $r_b$ is the radius of heat source and $V_s$ is the scanning speed.  
-The microscopic model  is coupled to the macroscopic model through the temperature field, where:
-\begin{align}
-    &G = ||\nabla {T}||_2 \\
-    &R = \frac{1}{G}\frac{\partial {T}}{\partial t}
-\end{align}
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for theassociated footnote;
+%% use the fnref command within \author or \address for footnotes;
+%% use the fntext command for theassociated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for theassociated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \address{Address\fnref{label3}}
+%% \fntext[label3]{}
 
-\section{Microscopic phase-field model}
-To simulate microstructure of powder bed, the phase-filed model for directional solidification of dilute binary alloys in a given thermal profile is employed. 
-We consider the Echebarria model \cite{Echebarria2004} with frozen temperature approximation, i.e., fixed $G,R$,
+\title{Phase-Field Model for Directional Solidification in Additive Manufacturing Testbed Problems}
+\author[oden]{Yuanxun Bao}
+\ead{yxbao@utexas.edu}
+
+\author[utme]{Yigong Qin}
+\ead{ygqin@utexas.edu}
+
+
+\author[oden]{George Biros}
+\ead{biros@oden.utexas.edu}
+
+\address[oden]{Oden Institute for Computational Engineering and Sciences, The University of Texas at Austin}
+\address[utme]{Department of Mechanical Engineering, The University of Texas at Austin}
+
+
+% \cortext[cor1]{Corresponding author}
+
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{}
+%% \address[label1]{}
+%% \address[label2]{}
+
+%%\author{}
+%%\address{}
+
+\begin{abstract}
+In this report we present the phase-field model for directional solidification \cite{Echebarria2004,Tourret2015}, its discretization and implementation, and numerical results for several benchmark problems. 
+\end{abstract}
+
+% \begin{keyword}
+%% keywords here, in the form: keyword \sep keyword
+
+%% PACS codes here, in the form: \PACS code \sep code
+
+%% MSC codes here, in the form: \MSC code \sep code
+%% or \MSC[2008] code \sep code (2000 is the default)
+
+% \end{keyword}
+
+\end{frontmatter}
+
+
+% \linenumber
+\section{Phase-field model for directional solidification}
+
+\subsection{Phase-field equations}
+We consider the phase-field model for directional solidification of dilute binary alloys proposed by Echebarria et al. \citep{Echebarria2004} with frozen temperature approximation:
 \begin{align}
     & T(z,t) = T_0 + G(z-Rt),
 \end{align}
-where $T_0$ is a reference temperature at $z=0$ and $t=0$, G is the thermal gradient which aligns with z-direction, R is the pulling speed. 
-
-The Eqs. (68) and (69) in Ref. \cite{Echebarria2004} are reformulated using a non-linear precondtioning of phase-field variable $\phi$\cite{Tourret2015}:
+where $T_0$ is a reference temperature at $z=0$ and $t=0$, $G$ is the thermal gradient along the $z$-direction and $R$ is the pulling speed. The Echebarria model consists of evolution equations of the order parameter $\phi$ with $\phi=1$ ($-1$) being solid (liquid)  and the supersaturation field $U$. Following the work of \cite{Tourret2015}, we make use of nonlinear preconditioning of $\phi$ by setting
 \begin{equation}
-\varphi(x, y, t)=\tanh \left\{\frac{\psi(x, y, t)}{\sqrt{2}}\right\}
-\end{equation}
- This preconditioning technique has been proved to significantly enhance the numerical stability of the equations to allow larger grid spacings for diffusive interfaces \cite{Glasner2001}.
- 
-By taking the interface anisotropy into account, the time evolution of the preconditioned PF $\psi$follows:
-
+\phi(x,z,t ) = \tanh \left(\frac{ \psi(x,z,t) }{\sqrt{2}} \right),
+\end{equation} 
+in order to improve the numerical stability of explicit schemes for larger grid spacings \cite{Glasner2001}.  The complete set of preconditioned phase-field equations for $\psi(x,z,t)$ and $U(x,z,t)$ are
 \begin{align}
- \left[1-(1-k) \frac{(z- \tilde{R} t)}{ \tilde{l}_T} \right] a_s(\hat{n})^2 \frac{\partial \psi}{\partial t} &= 
-  \div{} [a_s(\hat{n})^2 \grad{} \psi] - \sqrt{2}a_s(\hat{n})^2\phi|\grad{} \psi|^2 + \nonumber  \\  
- & \partial_x \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_x \psi)}  \right)  + 
-\partial_z \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_z \psi)}  \right)   \nonumber \\
-& \quad + \phi \sqrt{2} - \lambda (1-\phi^2)\sqrt{2} \left(U + \frac{z-\tilde{R} t}{ \tilde{l}_T} \right) 
+ & \left[1-(1-k) \frac{(z- \tilde{R} t)}{ \tilde{l}_T} \right] a_s(\hat{n})^2 \frac{\partial \psi}{\partial t} = \div{} [a_s(\hat{n})^2 \grad{} \psi] + \partial_x \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_x \psi)}  \right)  + 
+\partial_z \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_z \psi)}  \right)   \nonumber  \\  
+ &  \hspace{13em}  -\sqrt{2}a_s(\hat{n})^2\phi|\grad{} \psi|^2 + \phi \sqrt{2} - \lambda (1-\phi^2)\sqrt{2} \left(U + \frac{z-\tilde{R} t}{ \tilde{l}_T} \right),  \label{eq:psi} \\
+& \left[ 1+k-(1-k)\phi \right] \frac{\partial U}{\partial t} =  \div{} [\tilde{D}_l (1-\phi) \grad{} U + \vec{j}_{at}] + [1+(1-k)U]\frac{1-\phi^{2}}{\sqrt{2}}  \frac{\partial \psi}{\partial t}, \label{eq:saturation}
 \end{align}
-where $k$ is the interface solute partition coefficient, $\hat{n} = - {\nabla \phi}/{|\nabla \phi|}$ is the interface normal. The fourfold anisotropy funcation $a_{s}(\hat{n})$ can be expressed as:
-\begin{equation}
-a_{s}(\hat{n}) = (1-3\delta)\left\{1+\frac{4 \delta}{1-3\delta}  \frac{(\phi_{{x}}^4 +\phi_{{z}}^4 )}{| {\grad{}} \phi|^4}  \right\} 
-\end{equation}
-where $\delta$ is the strength of surface tension anisotropy.\\
-The dimensionless diffusion equation for concentration field is expressed as
-\begin{equation}
-\left(1+k-(1-k)\phi \right) \frac{\partial U}{\partial t} = \div{} [\tilde{D}_l (1-\phi) \grad{} U + \vec{j}_{at}] + [1+(1-k)U]\frac{1-\phi^{2}}{\sqrt{2}}  \frac{\partial \psi}{\partial t}\label{U_eqn}
-\end{equation}
-with dimensionless supersaturation, U, defined as
+with
 \begin{align}
-U = \frac{1}{1-k} \left( \frac{ c/c_l^0}{(1-\phi)/2 + k(1+\phi)/2} -1\right), \quad d(\phi) = (1-\phi)/2 .
+& U = \frac{1}{1-k} \left( \frac{ c/c_l^0}{(1-\phi)/2 + k(1+\phi)/2} -1\right), \\
+& \vec{j}_{at} =  [1+(1-k)U]\frac{1-\phi^{2}}{{2}}  \frac{\nabla \phi}{|\nabla \phi|} \frac{\partial \psi}{\partial t}, \\
 \end{align}
-where $c$ is the solute concentration field, $c_l^0$is the solute concentration of a flat interface at the reference temperature $T_0$. In equation \eqref{U_eqn}, $ \vec{j}_{at}$ is the anti-trapping current, which is a correction term to obtain quantitative results independent of interface thickness:
-\begin{equation}
-\vec{j}_{at} =  [1+(1-k)U]\frac{1-\phi^{2}}{{2}}  \frac{\nabla \phi}{|\nabla \phi|} \frac{\partial \psi}{\partial t} 
-\end{equation}
- 
-The interfacial width $W_0$ and relaxation time $\tau_0$ are used to non-dimensionalize the equations:
-where the non-dimensional liquid diffusion coefficient $\tilde{D_l}$, pulling velocity $\tilde{R}$, thermal length $\tilde{l_T}$ and coupling factor $\lambda$ are:
-
+where $c$ is the concentration field, $c_l^0 = c_{\infty}/k$ is the solute concentration of a flat interface at $T_0$ for an alloy of nominal concentration $c_{\infty}$, and $k$ is the interface solute partition coefficient. In \Cref{eq:psi,eq:saturation} space is scaled with the diffuse width $W_0$ and time is scaled with the relaxation time $\tau_0$. The non-dimensional liquid diffusion coefficient $\tilde{D_l}$, pulling velocity $\tilde{R}$, thermal length $\tilde{l_T}$ and coupling factor $\lambda$ are:
 \begin{align}
     & \tilde{R} = R\tau_0 / W_0 \\
-    & \tilde{D_l} = D_l \tau_0 / W_0^2 \\
+    & \tilde{D_l} = \frac{ D_l \tau_0 } { W_0^2 }  \\
     & \tilde{l}_T = l_T / W_0 \\
-    & \lambda =  \frac{5\sqrt{2}}{8}  \frac{W_0}{d_0} = a_{1} \frac{W_0}{d_0}
+    & \lambda =  \frac{5\sqrt{2}}{8}  \frac{W_0}{d_0} 
 \end{align}
- where $ l_T = {|m|c_{\infty}(1/k-1)}/{G}$ is the thermal length, m is liquidus slope and $c_{\infty}$ is the nominal solute concentration. $d_0 = {\Gamma}/{|m|c_{\infty}(1/k-1)}$  is the capillarity length and $\Gamma$ is the Gibbs-Thomson coefficient of solid-liquid interface. The relation between $\tau_0$ and $W_0$ is given by $\tau_0 =  {0.6267\lambda W_0^2}/{D_l} $ \cite{Echebarria2004}.
-
-\subsection{Misorientation}
-If material coordinate $(\T{x},\T{z})$ has a misorientation angle $\alpha_0$ with respect to thermal coordinates $(x,z)$. The anisotropy function can be derived by replacing derivatives $\phi_{{x}}$, $\phi_{{z}}$ by $\phi_{\T{x}}$, $\phi_{\T{z}}$, 
+ where $ l_T = {|m|c_{\infty}(1/k-1)}/{G}$ is the thermal length with $m$ the liquidus slope, and $d_0 = {\Gamma}/{  [ |m|c_{\infty}(1/k-1)] }$  is the capillarity length at $T_0$ with $\Gamma$ the Gibbs-Thomson coefficient of solid-liquid interface at. The relation between $\tau_0$ and $W_0$ is given by $\tau_0 =  {0.6267\lambda W_0^2}/{D_l} $ \cite{Echebarria2004}.  The standard four-fold function is employed to model anisotropic growth of $\phi$
 \begin{equation}
-a_{s}(\hat{n}) = (1-3\delta)\left\{1+\frac{4 \delta}{1-3\delta}  \frac{(\phi_{\T{x}}^4 + \phi_{\T{z}}^4 )}{| \WT{\grad{}} \phi|^4}  \right\} 
+a_{s}(\hat{n}) = (1-3\delta)\left\{1+\frac{4 \delta}{1-3\delta}  \frac{(\phi_{{x}}^4 +\phi_{{z}}^4 )}{| {\grad{}} \phi|^4}  \right\}, \label{eq:anisotropy}
 \end{equation}
-which can be accomplished by a rotation of coordinates:
+where $\hat{n} = - \grad{} \phi / | \grad{} \phi|$ is the normal vector to the interface, and $\delta$ is the strength of surface anisotropy tension. The effect of misorientation  is accomplished by a rotation of coordinates in \Cref{eq:anisotropy}
 \begin{align}
 & \left( 
 \begin{array}{c}
@@ -173,83 +291,95 @@ which can be accomplished by a rotation of coordinates:
 \phi_{x} \\ 
 \phi_{z}
 \end{array}
-\right) 
+\right),
 \end{align}
+where $\alpha_0$ is the initial misorientation angle with respect to the thermal gradient direction.
 
-\subsection{Microscopic fluctuation}
-At each grid point (i,j) and each time step we add a random perturbation $\eta\beta_{i,j}\sqrt{\Delta t}$ to the value of $\psi$ at the next time step \cite{Tourret2015}
+\subsection{Boundary conditions}
+The entire computational domain is assumed to be a rectangle $\Omega = [0,l_x] \times [0,l_z]$. We impose periodic boundary conditions (BCs) at $x = 0, l_x$, i.e.,
 \begin{equation}
-\psi_{i, j}(t+\Delta t)=\psi_{i, j}(t)+\Delta t \frac{\partial \psi_{i, j}}{\partial t}+\eta \beta_{i, j} \sqrt{\Delta t}
+\psi(0, z, t) = \psi(l_x, z, t), \quad U(0, z, t) = U(l_x, z, t),
 \end{equation}
-
-where $\beta_{i,j}$ is a random number generated with a flat distribution in the range [-0.5,0.5], $\Delta$t is the time step, and $\eta$ is the noise amplitude.
+and assume no-flux BCs at $z=0, l_z$, i.e.,
+\begin{align}
+& \partial_z \psi (x,0,t) = 0 , \quad \partial_z \psi(x, l_z, t) = 0, \\
+& \partial_z U (x,0,t) = 0 , \quad \partial_z U(x, l_z, t) = 0.
+\end{align}
 
 
 \section{Numerical discretizations}
 
-\subsection{Macro model}
+\subsection{Spatial discretization}
 
-\subsection{$\phi$-equation}
-We first discretize the $\phi$-equation. The challenge is to discretize the anisotropic surface tension term. First, note the anisotropic surface tension can be parametrized by $\theta \equiv \arctan(\phi_y / \phi_x)$, i.e., 
+We employ an explicit finite difference method to discretize the $\psi$-equation and use a finite volume discretization for the $U$-equation. We use $n_x$ equidistant points $\{ x_i = i \Delta x, i = 0,\dots, n_x-1\}$ where $\Delta x = l_x / n_x$ in the $x$-direction, and use $n_z$ equidistant points $\{ z_j = j \Delta z, j = 0,\dots, n_z-1\}$ where $\Delta z = l_z / (n_z-1)$ in the $z$-direction. We define $\psi_{i,j}$ at the cell nodes $(x_i,z_j)$, and define $U_{i,j}$ at the center of  the control volume centered at $(x_i, z_j)$. For the entire scope of this study, we assume $\Delta x = \Delta z$.
+
+
+To facilitate the spatial discretization, we parametrize the anisotropic surface tension by $\theta \equiv \arctan(\phi_z / \phi_x)$, i.e., 
+\begin{equation}
+a_s(\theta)=  1 + \delta \cos(4 \theta) , \quad a_s'(\theta) = -4 \delta \sin(4\theta),
+\end{equation}
+and by trigonometric identities, we have 
 \begin{align}
-& a_s(\theta)=  1 + \delta \cos(4 \theta) \\
-& a_s'(\theta) = -4 \delta \sin(4\theta) 
-\end{align}
-By using some trigonometric identities, and $\cos(\theta) = \phi_x / |\grad{} \phi|$ and  $\sin(\theta) = \phi_y / |\grad{} \phi|$, we have
-\begin{align}
-& \cos(4\theta) = 1-8\cos^2(\theta) \sin^2(\theta) = 1- 8 \frac{ \phi_x^2 \phi_z^2 }{|\grad{} \phi|^4} \\
+& \cos(4\theta) = -3  + 4 ( \cos^4(\theta) + \sin^4(\theta) ) = -3 +  4 \frac{ \phi_x^4 +  \phi_z^4 }{|\grad{} \phi|^4} ,  \\
 & \sin(4\theta) = 4 \sin(\theta) \cos(\theta) ( \cos^2(\theta) - \sin^2(\theta)) = 4 \frac{(\phi_x^3 \phi_z - \phi_x \phi_z^3 )}{|\grad{} \phi|^4}.
 \end{align}
-We can also write (see Appendix B of \cite{Tourret2015})
+Therefore, we can write (see details in Appendix B of \cite{Tourret2015})
 \begin{align}
-& \partial_x \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_x \psi)}  \right) = \partial_x (-a'_s(\theta) a_s(\theta) \partial_z \psi ) \\
+& \partial_x \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_x \psi)}  \right) = \partial_x (-a'_s(\theta) a_s(\theta) \partial_z \psi ), \\
 & \partial_z \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_z \psi)}  \right) = 
-\partial_z (a'_s(\theta) a_s(\theta) \partial_x \psi).
+\partial_z (a'_s(\theta) a_s(\theta) \partial_x \psi),
 \end{align}
-Therefore,
+and 
 \begin{align}
  & \div{} [a_s(\hat{n})^2 \grad{} \psi] +  \partial_x \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_x \psi)}  \right)  +
 \partial_z \left( |\grad{} \psi|^2 a_s(\hat{n}) \frac{\partial a_s(\hat{n})}{\partial (\partial_z \psi)}  \right) \nonumber \\
-= &  \  \partial_x  \underbrace{ \left[ a_s^2(\theta) \partial_x \psi - a'_s(\theta) a_s(\theta) \partial_z \psi \right]}_{=: F} + 
-\partial_z \underbrace{ \left[ a_s^2(\theta) \partial_z \psi + a'_s(\theta) a_s(\theta) \partial_x \psi \right]}_{=: J}  
+= &  \  \partial_x  \underbrace{ \left[ a_s^2(\theta) \partial_x \psi - a'_s(\theta) a_s(\theta) \partial_z \psi \right]}_{=: F_{\psi}} + 
+\partial_z \underbrace{ \left[ a_s^2(\theta) \partial_z \psi + a'_s(\theta) a_s(\theta) \partial_x \psi \right]}_{=: J_{\psi}}  .
 \label{eq:aniso_surf2}
 \end{align}
-
-We define $\phi(i,j)$ on the cell nodes. Therefore, \cref{eq:aniso_surf2} is discretized as
+\Cref{eq:aniso_surf2} is discretized as
 \begin{equation}
-\frac{F(i+1/2, j) - F(i-1/2,j)}{\Delta x} + \frac{J(i,j+1/2)-J(i,j-1/2)}{\Delta z}
+\frac{F_{\psi}(i+\frac{1}{2}, j) - F_{\psi}(i-\frac{1}{2},j)}{\Delta x} + \frac{J_{\psi}(i,j+\frac{1}{2})-J_{\psi}(i,j-\frac{1}{2})}{\Delta z},
 \end{equation}
-Note $F,J$ are defined on cell edges. For example, to evaluate $F(i+\frac{1}{2},j)$, we need to evaluate
+where $F_{\psi}$ and $J_{\psi}$ are defined on cell edges. For example, to evaluate the flux term $F_{\psi}(i+\frac{1}{2},j)$, we evaluate
 \begin{align}
-& a_s(\theta) \bigg|_{i+1/2,j} = \left( 1-3\delta + 4\delta  \frac{\phi_x^4 +  \phi_z^4}{|\grad{} \phi|^4} \right)\bigg|_{i+1/2,j} \\
-& a'_s(\theta) \bigg|_{i+1/2,j} = -16\delta  \frac{(\phi_x^3 \phi_z- \phi_x \phi_z^3 )}{|\grad{} \phi|^4} \bigg|_{i+1/2,j}\\
-& \partial_x \phi \bigg|_{i+1/2,j} = \frac{\phi_{i+1,j}-\phi_{i,j}}{\Delta x} \\
-& \partial_z \phi \bigg|_{i+1/2,j}  = \frac{\phi_{i,j+1}+\phi_{i+1,j+1}-\phi_{i,j-1}-\phi_{i+1,j-1}}{4\Delta z} 
+a_s(\theta) \big|_{i+1/2,j} &= \left( 1-3\delta + 4\delta  \frac{\phi_x^4 +  \phi_z^4}{|\grad{} \phi|^4} \right)\bigg|_{i+1/2,j} \\
+a'_s(\theta) \big|_{i+1/2,j} &= -16\delta  \frac{(\phi_x^3 \phi_z- \phi_x \phi_z^3 )}{|\grad{} \phi|^4} \bigg|_{i+1/2,j} \\
+\partial_x \phi \big|_{i+1/2,j} &= \frac{\phi_{i+1,j}-\phi_{i,j}}{\Delta x} \\
+\partial_z \phi \big|_{i+1/2,j}  &= \frac{\phi_{i,j+1}+\phi_{i+1,j+1}-\phi_{i,j-1}-\phi_{i+1,j-1}}{4\Delta z}.
 \end{align}
-Note evaluating $\partial_z \phi |_{i+1/2,j}$ requires averaging nearby cells. 
-
-
-\subsection{$U$-equation}
-\begin{itemize}
-\item A routine that takes in edge-centered vector data and outputs the divergence at cell nodes, i.e.,
-\begin{equation}
-\div{} \B{u} = \frac{u_{i+1/2,j} - u_{i-1/2,j}}{\Delta x} +  \frac{v_{i, j+1/2} - v_{i,j-1/2}}{\Delta z}
-\end{equation}
-
-\item we need the following terms at $(i+1/2,j)$ and $(i,j+1/2)$
+Note that  $\partial_z \phi |_{i+1/2,j}$ requires  an average of neighboring cell node values. In \Cref{eq:psi} we use a wider finite difference stencil to obtain $\grad{} \psi$ at cell nodes $(i,j)$, for example,
 \begin{align}
-& [(1-\phi) U_x]_{i+1/2,j} = \left( 1- \frac{\phi_{i+1,j} + \phi_{i,j}}{2} \right) \frac{U_{i+1,j}-U_{i,j}}{\Delta x}\\
-& [(1-\phi) U_z]_{i,j+1/2} = \left( 1- \frac{\phi_{i,j+1} + \phi_{i,j}}{2} \right) \frac{U_{i,j+1}-U_{i,j}}{\Delta z}\\
+\partial_x \psi \big|_{i,j} = \frac{ \psi_{i+1,j} - \psi_{i-1,j}}{2\Delta x}.
+\end{align} 
+To discretize the $U$-equation, we need the following flux terms on the cell edges $(i \pm 1/2,j)$ and $(i,j \pm 1/2)$,
+\begin{align}
+& F_{U}(i \pm \frac{1}{2}, j ) = \left(  \T{D}_l (1-\phi) U_x + [1+(1-k)U]  \frac{\phi_x}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}   \right) \bigg|_{i \pm \frac{1}{2}, j}, \\
+& J_{U}(i , j \pm \frac{1}{2}) = \left(  \T{D}_l (1-\phi) U_z + [1+(1-k)U]  \frac{\phi_z}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}   \right) \bigg|_{i, j \pm \frac{1}{2}}, 
+\end{align}
+where 
+\begin{align}
+  (1-\phi) U_x \bigg|_{i+1/2,j} &= \left( 1- \frac{\phi_{i+1,j} + \phi_{i,j}}{2} \right) \frac{U_{i+1,j}-U_{i,j}}{\Delta x}\\
+  (1-\phi) U_z \bigg|_{i,j+1/2} &= \left( 1- \frac{\phi_{i,j+1} + \phi_{i,j}}{2} \right) \frac{U_{i,j+1}-U_{i,j}}{\Delta z}\\
+  \left( [1+(1-k)U]  \frac{\phi_x}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}  \right) \Bigg|_{i+1/2,j}  &=  \frac{1}{2}\left( [1+(1-k)U_{i+1,j}] \frac{d\psi_{i+1,j}}{dt}  +[1+(1-k)U_{i,j}]\frac{d\psi_{i,j}}{dt} \right) \frac{\phi_x}{ |\grad{} \phi | }\bigg|_{i+1/2,j}  \\
+ \left( [1+(1-k)U]  \frac{\phi_y}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}  \right) \Bigg|_{i,j+1/2} &= \frac{1}{2}\left( [1+(1-k)U_{i,j+1}]\frac{d\psi_{i,j+1}}{dt} +[1+(1-k)U_{i,j}] \frac{d\psi_{i,j}}{dt}  \right)  \frac{\phi_x}{ |\grad{} \phi | }\bigg|_{i,+1/2j}  .
 \end{align}
 
-\item Similarly, for the anti-trapping flux $\vec{j}_{at}$,
+In summary, the semi-discrete equations of \Cref{eq:psi,eq:saturation} are 
 \begin{align}
-& \left[ [1+(1-k)U]  \frac{\phi_x}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}  \right]_{i+1/2,j} = \nonumber \\
-&  \frac{1}{2}\left[[1+(1-k)U_{i+1,j}]\partial_t\psi_{i+1,j}+[1+(1-k)U_{i,j}]\partial_t\psi_{i,j}\right]  \frac{\phi_x}{ |\grad{} \phi | }\bigg|_{i+1/2,j}  \\
-& \left[ [1+(1-k)U]  \frac{\phi_y}{ |\grad{} \phi | } \frac{\partial \psi}{\partial t}  \right]_{i,j+1/2} = \nonumber \\ 
-& \frac{1}{2}\left[[1+(1-k)U_{i,j+1}]\partial_t\psi_{i,j+1}+[1+(1-k)U_{i,j}]\partial_t\psi_{i,j}\right]  \frac{\phi_x}{ |\grad{} \phi | }\bigg|_{i,+1/2j}  
+& \left[ 1- (1-k) \frac{z_{i,j} - \tilde{R} t}{\tilde{l}_T} \right] a^2_s( \hat{n}_{i,j}) \frac{d \psi_{i,j}}{dt} = \frac{F_{\psi}(i+\frac{1}{2}, j) - F_{\psi}(i-\frac{1}{2},j)}{\Delta x} + \frac{J_{\psi}(i,j+\frac{1}{2})-J_{\psi}(i,j-\frac{1}{2})}{\Delta z} \nonumber \\
+& \hspace{13em} - \sqrt{2} a^2_s(\hat{n}_{ij}) \phi_{i,j} |\grad{} \psi_{i,j}|^2 + \phi_{i,j} \sqrt{2} + \lambda \left(1 - \phi_{i,j}^2 \right) \sqrt{2} \left( U_{i,j} + \frac{z_{i,j} - \tilde{R} t }{\tilde{l}_T} \right), \label{eq:psi_discrete} \\
+& [1+k-(1-k)\phi_{i,j}] \frac{dU_{i,j}}{dt} = \frac{F_{U}(i+\frac{1}{2}, j) - F_{U}(i-\frac{1}{2},j)}{\Delta x} + \frac{J_{U}(i,j+\frac{1}{2})-J_{U}(i,j-\frac{1}{2})}{\Delta z} \nonumber \\
+&\hspace{13em} + [1+(1-k) U_{i,j}] \frac{1-\phi^2_{i,j}}{\sqrt{2}} \frac{d \psi_{i,j}}{dt}. \label{eq:saturation_discrete}
 \end{align}
-\end{itemize}
+
+\subsection{Time marching scheme and microscopic fluctuation}
+We use explicit Euler scheme to discretize \Cref{eq:psi_discrete,eq:saturation_discrete} in time. To model secondary dentrites due to microscopic fluctuations, we add noise to the $\psi$-equation as follows,
+\begin{align}
+& \psi_{i,j}^{n+1} = \psi_{i,j}^n + \Delta t  \frac{d \psi_{i,j}}{dt}  + \eta \beta_{i,j} \sqrt{ \frac{\Delta t}{ \Delta x \Delta z}  },  \\
+& U_{i,j} ^{n+1} = U_{i,j}^n + \Delta t \frac{dU_{i,j}}{dt},
+\end{align}
+where $\beta_{i,j}$ is a i.i.d. random number drawn from the uniform distribution in $[-0.5,0.5]$ at each grid point, and the noise amplitude $\eta$ is determined empirically in practice, and is set to be 0.04 here. Note that the noise model in \cite{Tourret2015} scales by $\sqrt{\Delta t}$ only, and the secondary dendrite spacing is mesh dependent. The correct scaling of the noise is $\sqrt{ \frac{\Delta t}{ \Delta x \Delta z}  }$.
 
 \section{Implementation}
 
@@ -335,10 +465,32 @@ $W_0$ & interface thickness  & 36.45 & $d_0$ \\
 
 
    
+
+
+
+%% \section{}
+%% \label{}
+
+%% If you have bibdatabase file and want bibtex to generate the
+%% bibitems, please use
+%%
 \bibliographystyle{unsrt}
 \bibliography{Directional-Solidification.bib}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% else use the following coding to input the bibitems directly in the
+%% TeX file.
+
+%\begin{thebibliography}{00}
+
+%% \bibitem{label}
+%% Text of bibliographic item
+
+
+%\end{thebibliography}
 
 \end{document}
+\endinput
+%%
+%% End of file `elsarticle-template-num.tex'.
