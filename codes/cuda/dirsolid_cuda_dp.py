@@ -11,7 +11,6 @@ import os
 from scipy.io import savemat as save
 from numba import njit, cuda, vectorize, float64, float64, int32
 import numpy as np
-import cupy as cp
 from numba.cuda.random import create_xoroshiro128p_states, xoroshiro128p_uniform_float64
 from numpy.random import random
 import time
@@ -27,8 +26,9 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0 = PARA.phys_para()
-eps, alpha0, lxd, aratio, nx, dt, Mt, eta, seed_val, filename = PARA.simu_para(W0,Dl_tilde)
-U_0, seed, nts, direc = PARA.IO_para(W0,lxd)
+eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
+seed_val,U_0,nts,filename,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
+
 
 
 '''
@@ -83,15 +83,22 @@ hi= float64( 1./dx )
 
 dt_sqrt =  float64( np.sqrt(dt) )
 
-# Tishot = np.zeros((2*nv,nts+1))
+'''
+-------------------------------------------------------------------------------------------------
+ALLOCATE SPACE FOR OUTPUT ARRAYS
+-------------------------------------------------------------------------------------------------
+'''
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 
+
+'''
+-------------------------------------------------------------------------------------------------
+INIT. TIP POSITION
+-------------------------------------------------------------------------------------------------
+'''
 cur_tip = 1	# global variable that stores the tip z-index
 sum_arr = np.array([0], dtype=np.float64) # init sum = 0
-tip_thres = np.int32(math.ceil(0.8*nz)) # threshold for moving the frame
-print('threshold = ', tip_thres)
-
 
 
 @cuda.jit
@@ -136,7 +143,6 @@ def set_halo(u):
 Device function
 '''
 @cuda.jit('float64(float64, float64)',device=True)
-#@cuda.jit(device=True)
 def atheta(ux, uz):
 
     ux2 = (  cosa*ux + sina*uz )**2
@@ -155,7 +161,6 @@ def atheta(ux, uz):
     
     
 @cuda.jit('float64(float64, float64)',device=True)
-#@cuda.jit(device=True)
 def aptheta(ux, uz):
     uxr =  cosa*ux + sina*uz
     uzr = -sina*ux + cosa*uz
@@ -173,8 +178,8 @@ def aptheta(ux, uz):
         return 0.0
     
     
-# update global array, don't jit compile this function
-def set_BC(u,BCx,BCy):
+# set boundary conditions cpu version
+def setBC_cpu(u,BCx,BCy):
     
     # 0 periodic, 1 no flux (Neumann)
     
@@ -400,13 +405,7 @@ def rhs_U(U, U_new, ph, dpsi):
     m,n = U.shape
 
     if 0 < i < m-1 and 0 < j < n-1 :
-        # =============================================================
-        #
-        # 5. update U term
-        #
-        # =============================================================
-    
-          
+ 
         # define cell centered values
         phipjp=( ph[i + 1, j + 1] + ph[i + 0, j + 1] + ph[i + 0, j + 0] + ph[i + 1, j + 0] ) * 0.25
         phipjm=( ph[i + 1, j + 0] + ph[i + 0, j + 0] + ph[i + 0, j - 1] + ph[i + 1, j - 1] ) * 0.25
@@ -425,7 +424,7 @@ def rhs_U(U, U_new, ph, dpsi):
         jat_ip = 0.5*(1+(1-k)*U[i+1,j])*(1-ph[i+1,j]**2)*dpsi[i+1,j]
     	
         UR = hi*Dl_tilde*0.5*(2 - ph[i,j] - ph[i+1,j])*(U[i+1,j]-U[i,j]) + \
-    	 0.5*(jat + jat_ip)*nx
+    	     0.5*(jat + jat_ip)*nx
     	 
     	 
         # ============================
@@ -439,7 +438,7 @@ def rhs_U(U, U_new, ph, dpsi):
         jat_im = 0.5*(1+(1-k)*U[i-1,j+0])*(1-ph[i-1,j+0]**2)*dpsi[i-1,j+0]
         
         UL = hi*Dl_tilde*0.5*(2 - ph[i+0,j+0] - ph[i-1,j+0])*(U[i+0,j+0]-U[i-1,j+0]) + \
-    	 0.5*(jat + jat_im)*nx
+    	     0.5*(jat + jat_im)*nx
     	 
     	 
         # ============================
@@ -453,7 +452,7 @@ def rhs_U(U, U_new, ph, dpsi):
         jat_jp = 0.5*(1+(1-k)*U[i+0,j+1])*(1-ph[i+0,j+1]**2)*dpsi[i+0,j+1]      
         
         UT = hi*Dl_tilde*0.5*(2 - ph[i+0,j+0] - ph[i+0,j+1])*(U[i+0,j+1]-U[i+0,j+0]) + \
-    	 0.5*(jat + jat_jp)*nz
+    	     0.5*(jat + jat_jp)*nz
     	 
     	 
         # ============================
@@ -467,12 +466,10 @@ def rhs_U(U, U_new, ph, dpsi):
         jat_jm = 0.5*(1+(1-k)*U[i+0,j-1])*(1-ph[i+0,j-1]**2)*dpsi[i+0,j-1]      
         
         UB = hi*Dl_tilde*0.5*(2 - ph[i+0,j+0] - ph[i+0,j-1])*(U[i+0,j+0]-U[i+0,j-1]) + \
-    	 0.5*(jat + jat_jm)*nz
+    	     0.5*(jat + jat_jm)*nz
         
         rhs_U = ( (UR-UL) + (UT-UB) ) * hi + sqrt2 * jat
         tau_U = (1+k) - (1-k)*ph[i+0,j+0]
-       
-        # dU[i,j] = rhs_U / tau_U
 
         U_new[i,j] = U[i,j] + dt * ( rhs_U / tau_U )
 
@@ -486,24 +483,43 @@ def save_data(phi,U):
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') 
 
+
+
+
 ##############################################################################
-#psi0 = PARA.sins_initial(lx,nx,xx,zz)
-psi0 = PARA.seed_initial(xx,lx,zz)
+if ictype == 0: 
 
-#psi0 = PARA.planar_initial(lx,zz)
-U0 = 0*psi0 + U_0
-phi0 = np.tanh(psi0/sqrt2)
+    psi0 = PARA.seed_initial(xx,lx,zz)
+    U0 = 0*psi0 + U_0
+    phi0 = np.tanh(psi0/sqrt2)
 
-# append halo around data=
+elif ictype == 1:
+  
+    psi0 = PARA.planar_initial(lx,zz)
+    U0 = 0*psi0 + U_0
+    phi0 = np.tanh(psi0/sqrt2)
+
+elif ictype == 2:
+
+    psi0 = PARA.sum_sine_initial(lx,nx,xx,zz)
+    U0 = 0*psi0 + U_0
+    phi0 = np.tanh(psi0/sqrt2)
+   
+else: 
+    print('ERROR: invalid type of initial condtion...' )
+    sys.exit(1)
+
+
+# append halo around data
 psi = set_halo(psi0)
 phi = set_halo(phi0)
 U = set_halo(U0)
 zz = set_halo(zz)
 
 # set BCs
-set_BC(psi, 0, 1)
-set_BC(U, 0, 1)
-set_BC(phi,0,1)
+setBC_cpu(psi, 0, 1)
+setBC_cpu(U, 0, 1)
+setBC_cpu(phi,0,1)
 
 
 phi_cpu = phi.astype(np.float64)
@@ -515,7 +531,7 @@ psi_cpu = psi.astype(np.float64)
 order_param[:,[0]], conc[:,[0]] = save_data(phi_cpu, U_cpu)
 
 
-# arrays on device
+# allocate space on device
 psi_old = cuda.to_device(psi_cpu)
 phi_old = cuda.to_device(phi_cpu)
 U_old   = cuda.to_device(U_cpu)
@@ -528,24 +544,27 @@ dPSI = cuda.device_array(psi_cpu.shape, dtype=np.float64)
 zz_gpu  = cuda.to_device(zz)
 
 # CUDA kernel invocation parameters
+# cuda 2d grid parameters
 tpb2d = (16,16)
 bpg_x = math.ceil(phi.shape[0] / tpb2d[0])
 bpg_y = math.ceil(phi.shape[1] / tpb2d[1])
 bpg2d = (bpg_x, bpg_y)
 
-# CUDA random number states init
-# seed_val = np.uint64(np.random.randint(1))
-rng_states = create_xoroshiro128p_states( tpb2d[0]*tpb2d[1]*bpg_x*bpg_y, seed=seed_val)
-
-
+# cuda 1d grid parameters 
 tpb = 16 * 1
 bpg = math.ceil( np.max([nx,nz]) / tpb )
 
-print('(tpb,bpg) = ({0:2d},{1:2d})'.format(tpb, bpg))
+# CUDA random number states init
+rng_states = create_xoroshiro128p_states( tpb2d[0]*tpb2d[1]*bpg_x*bpg_y, seed=seed_val)
+
+
+print('2d threads per block: ({0:2d},{1:2d})'.format(tpb2d[0], tpb2d[1]))
+print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
+print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 kts = int(Mt/nts)
-start2 = time.time()
-# two steps per loop
+start = time.time()
+# march two steps per loop
 for nt in range(int(Mt/2)):
    
     # =================================================================
@@ -562,22 +581,25 @@ for nt in range(int(Mt/2)):
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
    
-    # update tip position    
-    cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
+    # =================================================================
+    # If moving frame flag is set to TRUE
+    # =================================================================
+    if mvf == True :
+        # update tip position    
+       cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
  
-    # when tip hit tip_thres, shift down by 1
-    while cur_tip >= tip_thres:
+       # when tip hit tip_thres, shift down by 1
+       while cur_tip >= tip_thres:
 
-        # new device arrays are used as buffer here, 
-        # dPSI are used as buffer for zz
-        moveframe[ bpg2d, tpb2d ](psi_old, phi_old, U_old, zz_gpu, psi_new, phi_new, U_new, dPSI)
-        copyframe[ bpg2d, tpb2d ](psi_new, phi_new, U_new, dPSI, psi_old, phi_old, U_old, zz_gpu)
+           # new device arrays are used as buffer here, 
+           # dPSI are used as buffer for zz
+           moveframe[ bpg2d, tpb2d ](psi_old, phi_old, U_old, zz_gpu, psi_new, phi_new, U_new, dPSI)
+           copyframe[ bpg2d, tpb2d ](psi_new, phi_new, U_new, dPSI, psi_old, phi_old, U_old, zz_gpu)
         
-        # once frame is moved, BC needs to be updated again
-        setBC_gpu[bpg,tpb]( psi_old, phi_old, U_old, dPSI  ) 
+           # once frame is moved, BC needs to be updated again
+           setBC_gpu[bpg,tpb]( psi_old, phi_old, U_old, dPSI  ) 
 
-
-        cur_tip = cur_tip-1
+           cur_tip = cur_tip-1
 
 
 
@@ -585,7 +607,7 @@ for nt in range(int(Mt/2)):
     if (2*nt+2)%kts==0:
        
        print('time step = ', 2*(nt+1) )
-       print('tip position nz = ', cur_tip)
+       if mvf == True: print('tip position nz = ', cur_tip)
 
 
 
@@ -594,9 +616,9 @@ for nt in range(int(Mt/2)):
        U  = U_old.copy_to_host()
        order_param[:,[kkk]], conc[:,[kkk]] = save_data(phi,U)
 
-end2 = time.time()
-print('elapse2: ', (end2-start2))
+end = time.time()
+print('elapsed time: ', (end-start))
 
 
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \ 
-'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2, 'dPSI':dPSI.copy_to_host() } )
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0,\
+'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )
