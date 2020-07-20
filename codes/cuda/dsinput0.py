@@ -9,7 +9,7 @@ Created on Fri May 29 11:10:53 2020
 
 
 import numpy as np
-from math import pi
+import math
 
 def phys_para():    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
@@ -38,34 +38,34 @@ def phys_para():
 
 def simu_para(W0,Dl_tilde):
     
-    eps = 1e-8                      #divide-by-zero treatment
-    alpha0 = 0                    # misorientation angle in degree
+    eps = 1e-8                      	# divide-by-zero treatment
+    alpha0 = 0                    	# misorientation angle in degree
     
     
-    lxd = 1.5*W0*2000                     # horizontal length in micron
-    aratio = 0.5                  # aspect ratio
-    nx = 2000               # number of grids in x   nx*aratio must be int
+    asp_ratio = 10                  	# aspect ratio
+    nx = 128            		# number of grids in x   nx*aratio must be int
+    lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
-    dt = 0.8*(dx)**2/(4*Dl_tilde)                   # time step size for forward euler
-    Mt = 10000                                 # total  number of time steps
-    Tt = 60                                    # total time
+    dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
+    Mt = 200000                      	# total  number of time steps
 
-    eta = 0.02                 # magnitude of noise
+    eta = 0.02                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
-    filename = 'dirsolid_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_seed'+str(seed_val)+'.mat'
-    
-    return eps, alpha0, lxd, aratio, nx, dt, Mt, eta, seed_val, filename
+    U0 = -0.3                		# initial value for U, -1 < U0 < 0
+    nts = 10				# number snapshots to save, Mt/nts must be int
+    mv_flag = True			# moving frame flag
+    tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
+    ictype = 0                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
-def IO_para(W0,lxd):
+    direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    filename = 'dirsolid_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     
-    U_0 = -0.3                  # initial value for U, -1< U_0 < 0
-    seed = 1                     # randnom seed number
-    nts = 10                     # number of snapshots in time   Mt/nts must be int
-    direc = '/scratch/07429/yxbao/data'                  # saving directory
     
-    return  U_0, seed, nts, direc
+    
 
+    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, filename, direc, mv_flag, tip_thres, \
+           ictype
 
 def seed_initial(xx,lx,zz): 
     
@@ -84,7 +84,7 @@ def planar_initial(lx,zz):
     return psi0
 
 
-def sins_initial(lx,nx,xx,zz): 
+def sum_sine_initial(lx,nx,xx,zz): 
     
     k_max = int(np.floor(nx/10))    # max wavenumber, 12 grid points to resolve the highest wavemode
     
@@ -102,16 +102,3 @@ def sins_initial(lx,nx,xx,zz):
     psi0 = -(zz-z0-sp)
     
     return psi0
-    
-
-    
-
-
-
-
-
-
-
-
-
-
