@@ -462,7 +462,49 @@ $W_0$ & interface thickness  & 36.45 & $d_0$ \\
    \end{figure}
    
 
+\subsection{AM condition}
+\begin{table}
+\centering
+\caption{Physical parameters in AM condition}
+\begin{tabular}{l l c c }
+\toprule
+symbol & meaning & values & units \\
+\midrule
+$T_m$ & melting temperature of pure Al & 933.25  & K \\
+$c_{\infty}$ & nominal solute concentration &  4 & wt $\%$. \\
+$m$ &liquidus slope &  -2.6 & K/wt $\%$. \\
+$k$ & interface solute partition coefficient & 0.14 &\\
+$D_l$ & solute diffusion coefficient &  $3\times 10^{-9}$  & ${\text{m}}^2/\text{s}$ \\
+$\delta$ & strength of the surface tension anisotropy  &  0.01  &\\
+$\Gamma$ & Gibbs-Thompson coefficient & $2.4\times 10^{-7}$ & Km \\
+$G$ & thermal gradient & 200 & $\text{K} / \text{cm}$ \\
+$R$ & pulling speed &  0.1 & $\text{m} / \text{s}$ \\
+$d_0$ & capillary length & $ 3.76$  & nm \\
+$W_0$ & interface thickness  & 5 & nm \\
+\bottomrule
+\end{tabular}\label{tab:AM}
+\end{table}
 
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{./figures/AM_condition.png}
+\caption{Using parameters in additive manufacturing condition \ref{tab:AM}. $U_0=-0.3$}
+\end{figure}
+
+ \begin{figure}[!ht]
+ \centering
+     \subfloat[$U_0=-0.78$\label{subfig-1:phi}]{%
+       \includegraphics[width=0.7\textwidth]{./figures/U_p78.png}
+     }
+     \hfill
+     \subfloat[$U_0=-0.72$\label{subfig-2:c/cinf}]{%
+       \includegraphics[width=0.7\textwidth]{./figures/U_p72.png}
+     }     
+     
+     \caption{Concentration distributions with different initial condition $U_0$. Using parameters in additive manufacturing condition \ref{tab:AM}.}
+     \label{fig:Ech}
+   \end{figure}
+   
 
    
 
