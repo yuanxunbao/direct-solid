@@ -151,7 +151,7 @@ def atheta(ux, uz):
         return a_s*( 1 + epsilon*(ux2**2 + uz2**2) / MAG_sq2   )
         # return uz/MAG_sq2
     else:
-        return 1.0
+        return a_s
     
     
 @cuda.jit('float64(float64, float64)',device=True)
@@ -543,7 +543,7 @@ bpg = math.ceil( np.max([nx,nz]) / tpb )
 
 print('(tpb,bpg) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-
+kts = int(Mt/nts)
 start2 = time.time()
 # two steps per loop
 for nt in range(int(Mt/2)):
@@ -561,8 +561,7 @@ for nt in range(int(Mt/2)):
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, zz_gpu, dPSI, 2*nt+1, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
-    '''    
-
+   
     # update tip position    
     cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
  
@@ -580,27 +579,24 @@ for nt in range(int(Mt/2)):
 
         cur_tip = cur_tip-1
 
-    '''
-    
-    
-    if math.remainder(2*(nt+1) , Mt/nts)==0 :
 
-        print('time step = ', 2*(nt+1) )
-        print('tip position nz = ', cur_tip)
 
-        phi_old.copy_to_host(phi)
-        U_old.copy_to_host(U)
-
-        tk = np.int32(2*(nt+1)/(Mt/nts))
-        order_param[:,[tk]], conc[:,[tk]] = save_data(phi, U) 
+    # print & save data 
+    if (2*nt+2)%kts==0:
+       
+       print('time step = ', 2*(nt+1) )
+       print('tip position nz = ', cur_tip)
 
 
 
-end2=time.time()
+       kkk = int(np.floor((2*nt+2)/kts))
+       phi = phi_old.copy_to_host()
+       U  = U_old.copy_to_host()
+       order_param[:,[kkk]], conc[:,[kkk]] = save_data(phi,U)
+
+end2 = time.time()
 print('elapse2: ', (end2-start2))
 
 
-
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \
-      'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2, 'dPSI':dPSI.copy_to_host() } )
-# save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1].T*W0,'y':Tishot,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start})
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0, \ 
+'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end2-start2, 'dPSI':dPSI.copy_to_host() } )
