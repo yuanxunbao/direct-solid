@@ -257,10 +257,10 @@ in order to improve the numerical stability of explicit schemes for larger grid 
 \end{align}
 with
 \begin{align}
-& U = \frac{1}{1-k} \left( \frac{ c/c_l^0}{(1-\phi)/2 + k(1+\phi)/2} -1\right), \\
+& U = \frac{1}{1-k} \left( \frac{ c/c_l^e}{(1-\phi)/2 + k(1+\phi)/2} -1\right), \\
 & \vec{j}_{at} =  [1+(1-k)U]\frac{1-\phi^{2}}{{2}}  \frac{\nabla \phi}{|\nabla \phi|} \frac{\partial \psi}{\partial t}, \\
 \end{align}
-where $c$ is the concentration field, $c_l^0 = c_{\infty}/k$ is the solute concentration of a flat interface at $T_0$ for an alloy of nominal concentration $c_{\infty}$, and $k$ is the interface solute partition coefficient. In \Cref{eq:psi,eq:saturation} space is scaled with the diffuse width $W_0$ and time is scaled with the relaxation time $\tau_0$. The non-dimensional liquid diffusion coefficient $\tilde{D_l}$, pulling velocity $\tilde{R}$, thermal length $\tilde{l_T}$ and coupling factor $\lambda$ are:
+where $c$ is the concentration field, $c_l^e$ is the solute concentration of a flat interface at $T_0$ for an alloy of nominal concentration $c_{\infty}$, and $k$ is the interface solute partition coefficient. In \Cref{eq:psi,eq:saturation} space is scaled with the diffuse width $W_0$ and time is scaled with the relaxation time $\tau_0$. The non-dimensional liquid diffusion coefficient $\tilde{D_l}$, pulling velocity $\tilde{R}$, thermal length $\tilde{l_T}$ and coupling factor $\lambda$ are:
 \begin{align}
     & \tilde{R} = R\tau_0 / W_0 \\
     & \tilde{D_l} = \frac{ D_l \tau_0 } { W_0^2 }  \\
@@ -387,34 +387,54 @@ where $\beta_{i,j}$ is a i.i.d. random number drawn from the uniform distributio
 \subsection{Divide-by-zero treatment}
 Whenever $|\grad{}\phi(i,j)|^{2} \leq \epsilon $, $\epsilon = 10^{-8}$, we set \cite{Provatas2010}
 \begin{align*}
-a_s(\hat{n}) &= 1-3\delta, \\
+a_s(\hat{n}) &= 1, \\
 a'_s(\hat{n}) &= 0.
 \end{align*}
 
+\subsection{Moving-frame}
+
 \subsection{Initial condition}
 \subsubsection{Initial condition for $\phi$}
-Planar interface perturbed with sinusoidal bumps:
+Depend on the shapes of the initial solid-liquid interface. The initial condition of $\phi$ can have following different types:
+\begin{enumerate}
+\item semi-circle seed on the bottom:
+\begin{align}
+& r = \sqrt{(x-x_0)^2+z^2},  \\
+& \phi(x,z,t=0) = - \tanh \left( \frac{r - r_0 }{W_0}  \right),
+\end{align}
+where $x_0$ is the seed position, $r_0$ is the seed radius.
+\item planar interface:
+\begin{equation}
+\phi(x,z,t=0) = - \tanh \left( \frac{z - z_0 }{W_0}  \right)
+\end{equation}
+\item planar interface perturbed by sinusoidal waves of different frequencies, each frequency has random amplitude and phase.
 \begin{equation}
 \phi(x,z,t=0) = - \tanh \left( \frac{z - z_0 - A_0\sin(2n\pi x /L_x  ) }{W_0}  \right),
 \end{equation}
-where $z_0$ is the initial height, $A_0$ is the amplitude to initial perturbation, and $n$ is the number of  sinusoidal bumps.  
+\end{enumerate}
+where $z_0$ is the initial height, $A_i$ is the amplitude to initial perturbation, and $n$ is the number of  sinusoidal bumps.  
 \subsubsection{Initial condition for U}
-As suggested in \cite{Takaki2014}, to avoid confusion, the frozen temperature approximation is:
+The frozen temperature approximation is:
 \begin{align}
-    & T(z,t) = T^e + G(z-Rt),
+    & T(z,t) = T_0 + G(z-Rt),
 \end{align}
-where $T^e$ is the temperature at z=0 and y=0.
+where $T_0$ is the temperature at z=0 and y=0.
 And the dimensionless supersaturation, U, is defined as
 
 \begin{equation}
 U=\frac{c_{l}-c_{l}^{e}}{c_{l}^{e}-c_{s}^{e}}=\frac{1}{1-k} \left( \frac{ c/c_l^e}{(1-\phi)/2 + k(1+\phi)/2} -1\right)
 \end{equation}
-$c_l^e$ and $c_s^e$ are the equilibrium concentrations of the liquid and solid at $T^e$, respectively. $c_s^e=kc_l^e$.
-The relation between $T^e$ and $c_l^e$ is:
+$c_l^e$ and $c_s^e$ are the equilibrium concentrations of the liquid and solid at $T_0$, respectively. $c_s^e=kc_l^e$.
+The relation between $T_0$ and $c_l^e$ is:
 \begin{equation}
-c_l^e = \frac{T_m-T^{e}}{m}
+c_l^e = \frac{T_m-T_0}{|m|}
 \end{equation}
 $T_m$ is the melting temperature of the pure material.
+The initial concentration in liquid is always $c_{\infty}$, so the relationship between initial condition $U_0$ and initial interface temperature $T_0$ is:
+\begin{equation}
+U_0=\frac{c_{l}-c_{l}^{e}}{c_{l}^{e}-c_{s}^{e}}=\frac{1}{1-k} ({ c_{\infty}/c_l^e}-1)=\frac{1}{1-k} (\frac{ c_{\infty}|m|}{T_m-T_0}-1)
+\end{equation}
+
 
 
 \section{Simulation results}
@@ -462,51 +482,6 @@ $W_0$ & interface thickness  & 36.45 & $d_0$ \\
    \end{figure}
    
 
-\subsection{AM condition}
-\begin{table}
-\centering
-\caption{Physical parameters in AM condition}
-\begin{tabular}{l l c c }
-\toprule
-symbol & meaning & values & units \\
-\midrule
-$T_m$ & melting temperature of pure Al & 933.25  & K \\
-$c_{\infty}$ & nominal solute concentration &  4 & wt $\%$. \\
-$m$ &liquidus slope &  -2.6 & K/wt $\%$. \\
-$k$ & interface solute partition coefficient & 0.14 &\\
-$D_l$ & solute diffusion coefficient &  $3\times 10^{-9}$  & ${\text{m}}^2/\text{s}$ \\
-$\delta$ & strength of the surface tension anisotropy  &  0.01  &\\
-$\Gamma$ & Gibbs-Thompson coefficient & $2.4\times 10^{-7}$ & Km \\
-$G$ & thermal gradient & 200 & $\text{K} / \text{cm}$ \\
-$R$ & pulling speed &  0.1 & $\text{m} / \text{s}$ \\
-$d_0$ & capillary length & $ 3.76$  & nm \\
-$W_0$ & interface thickness  & 5 & nm \\
-\bottomrule
-\end{tabular}\label{tab:AM}
-\end{table}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=1\linewidth]{./figures/AM_condition.png}
-\caption{Using parameters in additive manufacturing condition \ref{tab:AM}. $U_0=-0.3$}
-\end{figure}
-
- \begin{figure}[!ht]
- \centering
-     \subfloat[$U_0=-0.78$\label{subfig-1:phi}]{%
-       \includegraphics[width=0.7\textwidth]{./figures/U_p78.png}
-     }
-     \hfill
-     \subfloat[$U_0=-0.72$\label{subfig-2:c/cinf}]{%
-       \includegraphics[width=0.7\textwidth]{./figures/U_p72.png}
-     }     
-     
-     \caption{Concentration distributions with different initial condition $U_0$. Using parameters in additive manufacturing condition \ref{tab:AM}.}
-     \label{fig:Ech}
-   \end{figure}
-   
-
-   
 
 
 
