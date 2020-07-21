@@ -391,7 +391,11 @@ a_s(\hat{n}) &= 1, \\
 a'_s(\hat{n}) &= 0.
 \end{align*}
 
-\subsection{Moving-frame}
+\subsection{Moving-frame technique}
+In order to reduce the computational cost and avoid super long domains, the moving-frame technique is implemented. The scheme picks a window of appropriate size (cannot be too small) and sets a threshold line at the top portion of the window. As time goes, the position of the front of the solid is continuously been tracked. Whenever the tips touch the threshold line, remove the bottom line of the window, and add a new layer of liquid at the top of the window. At the top row of the window, $\psi$ is obtained by extrapolation of two nearby rows, $U=U_0$. \\
+If the threshold line is too closed to the top, the boundary effect will cause errors. To avoid that, the threshold line is set at least 200 grids away from the top line. As long as the window size and threshold line are chosen appropriately, the point-wise error of $\phi$ and errors of QoIs will be less than 1\%.
+
+
 
 \subsection{Initial condition}
 \subsubsection{Initial condition for $\phi$}
@@ -409,7 +413,7 @@ where $x_0$ is the seed position, $r_0$ is the seed radius.
 \end{equation}
 \item planar interface perturbed by sinusoidal waves of different frequencies, each frequency has random amplitude and phase.
 \begin{equation}
-\phi(x,z,t=0) = - \tanh \left( \frac{z - z_0 - A_0\sin(2n\pi x /L_x  ) }{W_0}  \right),
+\phi(x,z,t=0) = - \tanh \left( \frac{z - z_0 - \sum_{i=1}^{k_{max}} A_i\sin(2i\pi (x-x_i) /L_x ) }{W_0}  \right),
 \end{equation}
 \end{enumerate}
 where $z_0$ is the initial height, $A_i$ is the amplitude to initial perturbation, and $n$ is the number of  sinusoidal bumps.  
@@ -432,7 +436,7 @@ c_l^e = \frac{T_m-T_0}{|m|}
 $T_m$ is the melting temperature of the pure material.
 The initial concentration in liquid is always $c_{\infty}$, so the relationship between initial condition $U_0$ and initial interface temperature $T_0$ is:
 \begin{equation}
-U_0=\frac{c_{l}-c_{l}^{e}}{c_{l}^{e}-c_{s}^{e}}=\frac{1}{1-k} ({ c_{\infty}/c_l^e}-1)=\frac{1}{1-k} (\frac{ c_{\infty}|m|}{T_m-T_0}-1)
+U(x,z,t=0)=\frac{c_{l}-c_{l}^{e}}{c_{l}^{e}-c_{s}^{e}}=\frac{1}{1-k} ({ c_{\infty}/c_l^e}-1)=\frac{1}{1-k} (\frac{ c_{\infty}|m|}{T_m-T_0}-1)
 \end{equation}
 
 
@@ -462,22 +466,40 @@ $W_0$ & interface thickness  & 36.45 & $d_0$ \\
 
 \end{table}
 
-\subsection{Validation}
+\subsection{Primary results}
 
-
+\begin{table}
+\centering
+\caption{Simulation parameters}
+\begin{tabular}{l l c c }
+\toprule
+symbol & meaning & values & units \\
+\midrule
+$nx$ & number of grids in x direciton & 128  &  \\
+$asp\_ratio$ & aspect ratio &  10& \\
+$l_x$ & length of domain &  172.5 &$\mu m$ \\
+$eps$ & threshold in divide by zero treatment &1e-8 &\\
+$\alpha_0$ & misorientation angle & 0  &  \\
+$\Delta x$ & mesh width &  1.4  &\\
+$\Delta t$ & time step size  &  0.8*${{\Delta x}^2}/({4*\Delta t})$  &\\
+$M_t$ & number of time steps  &  240000  &\\
+$U_0$ & initial value of U  &  -0.3  &\\
+\bottomrule
+\end{tabular}\label{tab:Takaki}
+\end{table}
 
 
  \begin{figure}[!ht]
  \centering
-     \subfloat[My result\label{subfig-1:phi}]{%
-       \includegraphics[width=1\textwidth]{./figures/Takaki_noise_level.png}
+     \subfloat[cell\label{subfig-1:phi}]{%
+       \includegraphics[width=0.7\textwidth]{./figures/cell.png}
      }
      \hfill
-     \subfloat[Fig. 3(a) of the reference \cite{Takaki2014}\label{subfig-2:c/cinf}]{%
-       \includegraphics[width=0.7\textwidth]{./figures/TakakiFig3a.png}
+     \subfloat[dendrite\label{subfig-2:c/cinf}]{%
+       \includegraphics[width=0.7\textwidth]{./figures/dendrite.png}
      }     
      
-     \caption{(a) Dendrite morphologies and concentration distributions with different misorientation angle $\alpha_0$ and noise level $\eta$. Use the same physical parameters of Al-Cu in \cite{Takaki2014}(b) Comparison with the reference \cite{Takaki2014}}
+     \caption{(a) Dendrite morphologies and concentration distributions.(a) $\eta=0$. (b) $\eta=0.05$ Use the same physical parameters of Al-Cu in \cite{Takaki2014}}
      \label{fig:Ech}
    \end{figure}
    
