@@ -72,16 +72,9 @@ nv= nz*nx #number of variables
 dx = float64( lx/nx )
 dz = float64( lz/(nz-1) ) 
 
-print(dx)
-print(dz)
-print(dt)
-
 x = (np.linspace(0,lx-dx,nx)).astype(np.float64)
 z = (np.linspace(0,lz,nz)).astype(np.float64)
 zz,xx = np.meshgrid(z, x)
-
-print(zz.shape)
-print(xx.shape)
 
 dxdz_in = float64( 1./(dx*dz) ) 
 dxdz_in_sqrt = float64( np.sqrt(dxdz_in) )
@@ -487,8 +480,9 @@ def save_data(phi,U):
     
     cr =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )/cr
-    #c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
-    
+
+    # c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
+   
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') 
 

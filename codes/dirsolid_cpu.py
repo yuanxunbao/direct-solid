@@ -425,6 +425,7 @@ end = time.time()
 
 print('compile time: ', end - start )
 
+print(psi.shape)
 
 kts = int(Mt/nts)
 start = time.time()
@@ -445,13 +446,12 @@ for ii in range(Mt):
     # =================================================================
     if mvf == True :
     # check cross Nset, if true, move down
-    
         psi, U, zz, Ntip,ztip = move_frame(Ntip, psi, phi, U, zz)
         Ntip_arr[ii]=Ntip; ztip_arr[ii]=ztip
-       
-        # add boundary
-        psi = set_BC(psi, 0, 1)
-        U = set_BC(U, 0, 1)
+    
+    # add boundary
+    psi = set_BC(psi, 0, 1)
+    U = set_BC(U, 0, 1)
     
  
     # update phi
@@ -475,4 +475,4 @@ print('elapsed: ', end - start )
 
 Uf = U[1:-1,1:-1]
 
-save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start})
+save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start,'dPSI',dPSI})
