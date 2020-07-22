@@ -627,5 +627,5 @@ end = time.time()
 print('elapsed time: ', (end-start))
 
 
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz_gpu.copy_to_host()[1:-1,1:-1]*W0,'dt':dt*tau0,\
 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )
