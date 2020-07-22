@@ -71,10 +71,17 @@ nz = int32(aratio*nx+1)
 nv= nz*nx #number of variables
 dx = float64( lx/nx )
 dz = float64( lz/(nz-1) ) 
+
+print(dx)
+print(dz)
+print(dt)
+
 x = (np.linspace(0,lx-dx,nx)).astype(np.float64)
 z = (np.linspace(0,lz,nz)).astype(np.float64)
 zz,xx = np.meshgrid(z, x)
 
+print(zz.shape)
+print(xx.shape)
 
 dxdz_in = float64( 1./(dx*dz) ) 
 dxdz_in_sqrt = float64( np.sqrt(dxdz_in) )
@@ -157,7 +164,7 @@ def atheta(ux, uz):
         return a_s*( 1 + epsilon*(ux2**2 + uz2**2) / MAG_sq2   )
         # return uz/MAG_sq2
     else:
-        return a_s
+        return 1.0 #a_s
     
     
 @cuda.jit('float64(float64, float64)',device=True)
@@ -552,7 +559,7 @@ bpg2d = (bpg_x, bpg_y)
 
 # cuda 1d grid parameters 
 tpb = 16 * 1
-bpg = math.ceil( np.max([nx,nz]) / tpb )
+bpg = math.ceil( np.max( [phi.shape[0], phi.shape[1]] ) / tpb )
 
 # CUDA random number states init
 rng_states = create_xoroshiro128p_states( tpb2d[0]*tpb2d[1]*bpg_x*bpg_y, seed=seed_val)
@@ -608,8 +615,6 @@ for nt in range(int(Mt/2)):
        
        print('time step = ', 2*(nt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
-
-
 
        kkk = int(np.floor((2*nt+2)/kts))
        phi = phi_old.copy_to_host()
