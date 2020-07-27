@@ -478,10 +478,10 @@ def rhs_U(U, U_new, ph, dpsi):
 
 def save_data(phi,U):
     
-    cr =  1+ (1-k)*U_0
-    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )/cr
+    cinf_cl0 =  1+ (1-k)*U_0
+    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
 
-    # c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
+#    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
    
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') 
@@ -498,7 +498,7 @@ if ictype == 0:
 
 elif ictype == 1:
   
-    psi0 = PARA.planar_initial(lx,zz)
+    psi0 = PARA.planar_initial(lz,zz)
     U0 = 0*psi0 + U_0
     phi0 = np.tanh(psi0/sqrt2)
 
@@ -612,14 +612,13 @@ for nt in range(int(Mt/2)):
        print('time step = ', 2*(nt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
 
-       kkk = int(np.floor((2*nt+2)/kts))
+       kk = int(np.floor((2*nt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       order_param[:,[kkk]], conc[:,[kkk]] = save_data(phi,U)
+       order_param[:,[kk]], conc[:,[kk]] = save_data(phi,U)
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
-
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':zz[1:-1,1:-1]*W0,'dt':dt*tau0,\
-'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx, 'zz':zz_gpu.copy_to_host()[1:-1,1:-1],'dt':dt,\
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )

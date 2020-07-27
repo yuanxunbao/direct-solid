@@ -286,7 +286,7 @@ def _rhs_psi(ps,ph,U,zz):
     tp = (1-(1-k)*Up)
     tau_psi = tp*A2 if tp >= k else k*A2
 
-    return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr
+    return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
 
 
 
@@ -391,7 +391,7 @@ if ictype == 0:
 
 elif ictype == 1:
 
-    psi0 = PARA.planar_initial(lx,zz)
+    psi0 = PARA.planar_initial(lz,zz)
     U0 = 0*psi0 + U_0
     phi0 = np.tanh(psi0/sqrt2)
 
@@ -475,4 +475,4 @@ print('elapsed: ', end - start )
 
 Uf = U[1:-1,1:-1]
 
-save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start,'dPSI':dPSI})
+save(os.path.join(direc,filename),{'xx':xx,'zz':zz[1:-1,1:-1],'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt,'nx':nx,'nz':nz,'Tend':t*tau0,'walltime':end-start,'dPSI':dPSI})

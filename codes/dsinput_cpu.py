@@ -47,7 +47,7 @@ def simu_para(W0,Dl_tilde):
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 400000                      	# total  number of time steps
+    Mt = 10000                      	# total  number of time steps
 
     eta = 0.0                		# magnitude of noise
 
@@ -69,16 +69,16 @@ def simu_para(W0,Dl_tilde):
 
 def seed_initial(xx,lx,zz): 
     
-    r0 = 0.5625
+    r0 = 0.5625 * 10
     r = np.sqrt( (xx-lx/2) **2+(zz)**2)     
     psi0 = r0 - r 
     
     return psi0
 
 
-def planar_initial(lx,zz):
+def planar_initial(lz,zz):
     
-    z0 = lx*0.01                   # initial location of interface in W0   
+    z0 = lz*0.01                   # initial location of interface in units of W0   
     psi0 = z0 - zz
     
     return psi0

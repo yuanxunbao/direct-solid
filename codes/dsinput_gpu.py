@@ -43,20 +43,20 @@ def simu_para(W0,Dl_tilde):
     
     
     asp_ratio = 10                  	# aspect ratio
-    nx = 128            		# number of grids in x   nx*aratio must be int
+    nx = 128*1  	       		# number of grids in x   nx*aratio must be int
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 200000                      	# total  number of time steps
+    Mt = 500000                      	# total  number of time steps
 
-    eta = 0.02                		# magnitude of noise
+    eta = 0.0                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 10				# number snapshots to save, Mt/nts must be int
-    mv_flag = True			# moving frame flag
-    tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
-    ictype = 0                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    mv_flag = False			# moving frame flag
+    tip_thres = np.int32(math.ceil(0.8*nx*asp_ratio))
+    ictype = 0                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
@@ -69,16 +69,16 @@ def simu_para(W0,Dl_tilde):
 
 def seed_initial(xx,lx,zz): 
     
-    r0 = 0.5625
-    r = np.sqrt( (xx-lx/2) **2+(zz)**2)     
+    r0 = 0.5625 * 10 
+    r = np.sqrt( (xx-lx/2)**2 + zz**2)     
     psi0 = r0 - r 
     
     return psi0
 
 
-def planar_initial(lx,zz):
+def planar_initial(lz,zz):
     
-    z0 = lx*0.01                   # initial location of interface in W0   
+    z0 = lz*0.01                   # initial location of interface in W0   
     psi0 = z0 - zz
     
     return psi0
@@ -89,6 +89,8 @@ def sum_sine_initial(lx,nx,xx,zz):
     k_max = int(np.floor(nx/10))    # max wavenumber, 12 grid points to resolve the highest wavemode
     
     amp = 1
+   
+    np.random.seed(0)
     A = (np.random.rand(k_max)-0.5) * amp  # amplitude, draw from [-1,1] * eta
     x_c = np.random.rand(k_max)*lx;                  # shift, draw from [0,Lx]    
     z0 = lx*0.01;                               # level of z-axis
