@@ -286,8 +286,8 @@ def _rhs_psi(ps,ph,U,zz):
     tp = (1-(1-k)*Up)
     tau_psi = tp*A2 if tp >= k else k*A2
 
-    return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
-
+    # return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
+    return rhs_psi/tau_psi
 
 
 
@@ -436,7 +436,9 @@ for ii in range(Mt):
 
     dPSI = set_BC(dPSI, 0, 1)
     
-    psi = psi + dt*dPSI 
+    beta = random(psi.shape) - 0.5
+    
+    psi = psi + dt*dPSI + dt_sr*dxdz_in_sqrt*beta*eta
   
     U = U + dt*rhs_U(U,phi,dPSI)
     
