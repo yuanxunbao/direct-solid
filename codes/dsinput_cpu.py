@@ -42,21 +42,21 @@ def simu_para(W0,Dl_tilde):
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 5                  	# aspect ratio
+    asp_ratio = 10                  	# aspect ratio
     nx = 128            		# number of grids in x   nx*aratio must be int
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 200000                      	# total  number of time steps
+    Mt = 400000                      	# total  number of time steps
 
     eta = 0.0                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 10				# number snapshots to save, Mt/nts must be int
-    mv_flag = True			# moving frame flag
+    mv_flag = False			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
-    ictype = 0                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    ictype = 1                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     filename = 'dirsolid_cpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
@@ -97,7 +97,7 @@ def sum_sine_initial(lx,nx,xx,zz):
     sp = 0*zz
     for kk in range(k_max):
        
-        sp = sp + A[kk]*np.sin(2*pi*kk/lx* (xx-x_c[kk]) );
+        sp = sp + A[kk]*np.sin(2*math.pi*kk/lx* (xx-x_c[kk]) );
         
     psi0 = -(zz-z0-sp)
     

@@ -475,4 +475,4 @@ print('elapsed: ', end - start )
 
 Uf = U[1:-1,1:-1]
 
-save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start,'dPSI',dPSI})
+save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'t':t*tau0,'mach_time':end-start,'dPSI':dPSI})
