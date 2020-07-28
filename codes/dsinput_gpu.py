@@ -99,7 +99,7 @@ def sum_sine_initial(lx,nx,xx,zz):
     sp = 0*zz
     for kk in range(k_max):
        
-        sp = sp + A[kk]*np.sin(2*pi*kk/lx* (xx-x_c[kk]) );
+        sp = sp + A[kk]*np.sin(2*math.pi*kk/lx* (xx-x_c[kk]) );
         
     psi0 = -(zz-z0-sp)
     

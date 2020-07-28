@@ -620,5 +620,5 @@ for nt in range(int(Mt/2)):
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx, 'zz':zz_gpu.copy_to_host()[1:-1,1:-1],'dt':dt,\
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':W0*zz_gpu.copy_to_host()[1:-1,1:-1],'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )
