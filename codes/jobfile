@@ -1,0 +1,4 @@
+python3 dirsolid_cuda_dp.py dsinput_alpha0
+python3 dirsolid_cuda_dp.py dsinput_alpha1
+python3 dirsolid_cuda_dp.py dsinput_alpha2
+python3 dirsolid_cuda_dp.py dsinput_alpha3
