@@ -25,7 +25,7 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0 = PARA.phys_para()
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty = PARA.phys_para()
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
 seed_val,U_0,nts,filename,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
 
