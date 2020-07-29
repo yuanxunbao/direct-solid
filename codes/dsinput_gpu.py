@@ -26,16 +26,16 @@ def phys_para():
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
     tau0 = 0.6267*lamd*W0**2/Dl     # time scale               s
     
-    
+    c_infty = 2.45e-3
     # non-dimensionalized parameters based on W0 and tau0
     
     R_tilde = R*tau0/W0
     Dl_tilde = Dl*tau0/W0**2
     lT_tilde = lT/W0
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, G, R
 
-
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R
+  
 def simu_para(W0,Dl_tilde):
     
     eps = 1e-8                      	# divide-by-zero treatment

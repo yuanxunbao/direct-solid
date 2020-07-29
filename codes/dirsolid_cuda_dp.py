@@ -25,7 +25,8 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, G, R= PARA.phys_para()
+
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R = PARA.phys_para()
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
 seed_val,U_0,nts,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
 
@@ -92,7 +93,7 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 '''
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
-
+zz_mv = np.zeros((nv,nts+1), dtype=np.float64)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -478,15 +479,17 @@ def rhs_U(U, U_new, ph, dpsi):
 
 
 
-def save_data(phi,U):
+def save_data(phi,U,zz):
     
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
-
+    
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
    
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
-           np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') 
+           np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') , \
+           np.reshape(zz[1:-1,1:-1], (nv,1), order='F') 
+            
 
 
 
@@ -533,7 +536,7 @@ psi_cpu = psi.astype(np.float64)
 
 
 # save initial data
-order_param[:,[0]], conc[:,[0]] = save_data(phi_cpu, U_cpu)
+order_param[:,[0]], conc[:,[0]], zz_mv[:,[0]] = save_data(phi_cpu, U_cpu, zz )
 
 
 # allocate space on device
@@ -617,10 +620,11 @@ for nt in range(int(Mt/2)):
        kk = int(np.floor((2*nt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       order_param[:,[kk]], conc[:,[kk]] = save_data(phi,U)
+       zz_cpu = zz_gpu.copy_to_host()	
+       order_param[:,[kk]], conc[:,[kk]], zz_mv[:,[kk]] = save_data(phi,U,zz_cpu)
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz':W0*zz_gpu.copy_to_host()[1:-1,1:-1],'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'dPSI':dPSI.copy_to_host() } )
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start } )
