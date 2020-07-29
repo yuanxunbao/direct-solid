@@ -25,11 +25,13 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0 = PARA.phys_para()
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, G, R= PARA.phys_para()
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
-seed_val,U_0,nts,filename,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
+seed_val,U_0,nts,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
 
 
+filename = 'dirsolid'+ '_G'+str('%4.1E'%(G*1e6)) + '_R'+str('%4.2F'%(R/1e6)) + '_noise'+ \
+str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_U0'+str(U_0)+'.mat'
 
 '''
 -------------------------------------------------------------------------------------------------

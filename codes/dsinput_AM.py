@@ -14,7 +14,7 @@ import math
 def phys_para():    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
     G = 1                        # thermal gradient        K/um
-    R = 0.02e6                          # pulling speed           um/s
+    R = 0.02*1E6                          # pulling speed           um/s
     delta = 0.01                    # strength of the surface tension anisotropy         
     k = 0.14                        # interface solute partition coefficient
     c_infm = 10.4                  # shift in melting temperature     K
@@ -33,7 +33,7 @@ def phys_para():
     Dl_tilde = Dl*tau0/W0**2
     lT_tilde = lT/W0
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, G, R
 
 
 def simu_para(W0,Dl_tilde):
@@ -59,12 +59,12 @@ def simu_para(W0,Dl_tilde):
     ictype = 2                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
     direc = '/scratch/07428/ygqin/data'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
-    filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
+    # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     
     
     
 
-    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, filename, direc, mv_flag, tip_thres, \
+    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, direc, mv_flag, tip_thres, \
            ictype
 
 def seed_initial(xx,lx,zz): 
