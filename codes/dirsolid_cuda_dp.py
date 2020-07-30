@@ -15,6 +15,7 @@ from numba.cuda.random import create_xoroshiro128p_states, xoroshiro128p_uniform
 from numpy.random import random
 import time
 import math
+from QoIs import *
 
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
