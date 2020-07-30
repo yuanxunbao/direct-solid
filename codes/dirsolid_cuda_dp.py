@@ -93,7 +93,7 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 '''
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
-zz_mv = np.zeros((nv,nts+1), dtype=np.float64)
+zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -488,7 +488,7 @@ def save_data(phi,U,zz):
    
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') , \
-           np.reshape(zz[1:-1,1:-1], (nv,1), order='F') 
+           zz[[1],1:-1].T 
             
 
 
