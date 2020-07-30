@@ -65,10 +65,6 @@ def tcp( phi, Ntip, cgrid ):
     Nup = Ntip + cgrid
     return phi[:Nup,:]
 
-def tcp_ud( phi, Ntip, ugrid , dgrid):
-    
-    Nup = Ntip + cgrid
-    return phi[:Nup,:]
     
 def tcpa( phi, Ntip, cgrid ):
     
@@ -105,7 +101,7 @@ def solute_variability(c, Nss, T, Te):
 
 def interf_len(phi):
     
-    coeff = 0.1
+    coeff = 1
     inter_len = np.sum( (1+phi)*(1-phi) )
     Lf = coeff*inter_len
     

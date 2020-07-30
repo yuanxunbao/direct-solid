@@ -48,7 +48,7 @@ mph = 'dendrite'
 
 ## ======================= load data ==========================##
 # loadfile1 = 'move_eta004.mat'
-loadfile1 = 'dirsolid_gpu_noise4.00E-02_misori15_lx2812.5_nx2000_asp0.5_seed105'
+loadfile1 = 'dirsolid_gpu_noise4.00E-02_misori0_lx2812.5_nx2000_asp0.5_seed192'
 
 
 op = (loadmat(loadfile1)['order_param'])
@@ -102,8 +102,8 @@ Ttip = Ti + G*( ztip - R*Ttd )
 print('tip temperature: ',Ttip ,'K')
 
 # dendrite structure
-interf_len = interf_len(phi)
-print('length of interface: ', interf_len)
+inter_len = interf_len(phi)*dxd**2*1e-6
+print('length of interface: ', inter_len)
 print('\n')
 
 if alpha0==0:
@@ -162,8 +162,8 @@ plt.xlabel('temperature');plt.ylabel('HCS')
 plt.legend(['cell','dendrite'])
 
 ax4 = fig2.add_subplot(133)
-ax4.plot(Tz_cp,Kc)
-plt.xlabel('temperature');plt.ylabel('permeability')
+ax4.plot(Tz_cp,np.log10(Kc))
+plt.xlabel('temperature');plt.ylabel('permeability log(Kc)')
 plt.legend(['cell','dendrite'])
 
 
