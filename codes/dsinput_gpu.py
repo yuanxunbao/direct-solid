@@ -27,6 +27,10 @@ def phys_para():
     tau0 = 0.6267*lamd*W0**2/Dl     # time scale               s
     
     c_infty = 2.45e-3
+    Te = 821
+    Tm = 933.47
+    Ti = 931.20
+    U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
     # non-dimensionalized parameters based on W0 and tau0
     
     R_tilde = R*tau0/W0
@@ -34,7 +38,7 @@ def phys_para():
     lT_tilde = lT/W0
 
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Te, U_0
   
 def simu_para(W0,Dl_tilde):
     
@@ -52,7 +56,7 @@ def simu_para(W0,Dl_tilde):
     eta = 0.0                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
-    U0 = -0.3                		# initial value for U, -1 < U0 < 0
+    #U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 10				# number snapshots to save, Mt/nts must be int
     mv_flag = False			# moving frame flag
     tip_thres = np.int32(math.ceil(0.8*nx*asp_ratio))
@@ -60,12 +64,12 @@ def simu_para(W0,Dl_tilde):
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    
+    qts = nts
     
     
 
-    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, direc, mv_flag, tip_thres, \
-           ictype
+    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
+           ictype, qts
 
 def seed_initial(xx,lx,zz): 
     

@@ -27,10 +27,11 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R = PARA.phys_para()
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Te, U_0 = PARA.phys_para()
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
-seed_val,U_0,nts,direc, mvf, tip_thres, ictype = PARA.simu_para(W0,Dl_tilde)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
 
+mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid'+ '_G'+str('%4.1E'%(G*1e6)) + '_R'+str('%4.2F'%(R/1e6)) + '_noise'+ \
 str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_U0'+str(U_0)+'.mat'
@@ -87,6 +88,8 @@ hi= float64( 1./dx )
 
 dt_sqrt =  float64( np.sqrt(dt) )
 
+dxd = dx*W0; lxd = lx*W0
+
 '''
 -------------------------------------------------------------------------------------------------
 ALLOCATE SPACE FOR OUTPUT ARRAYS
@@ -103,7 +106,7 @@ INIT. TIP POSITION
 '''
 cur_tip = 1	# global variable that stores the tip z-index
 sum_arr = np.array([0], dtype=np.float64) # init sum = 0
-
+Ntip = 1
 
 @cuda.jit
 def sum_cur_tip(d_sum_arr, d_tip, d_phi):
@@ -571,7 +574,11 @@ print('2d threads per block: ({0:2d},{1:2d})'.format(tpb2d[0], tpb2d[1]))
 print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-kts = int(Mt/nts)
+kts = int(Mt/nts);
+interq = int(Mt/qts)
+inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
+fs_arr = []; ztip_arr = np.zeros(qts); Ttip_arr = np.zeros(qts); 
+alpha_arr = np.zeros(nz,qts);
 start = time.time()
 # march two steps per loop
 for nt in range(int(Mt/2)):
@@ -611,7 +618,38 @@ for nt in range(int(Mt/2)):
            cur_tip = cur_tip-1
 
 
-
+    #save QoIs
+    if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
+        
+        kqs = int(np.floor((2*nt+2)/interq))
+        phi = phi_old.copy_to_host().T
+        #U  = U_old.copy_to_host().T
+        #cnc = c_infty* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
+        zz_cpu = zz_gpu.copy_to_host().T	      
+        Tz =  Ti + G*( zz[:,3] - R*nt*dt)
+        ztip, Ntip = ztip_Ntip( phi, zz, Ntip)
+        ztip_arr[kqs] = ztip
+        Ttip_arr[kqs] = Ti + G*( ztip - R*nt*dt )
+        inter_len[kqs] = interf_len(phi)*dxd**2
+        if alpha0 == 0:
+            alpha_arr[kqs] = alpha0
+            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)  # this needs to revisit
+        else:
+            imid = int(nz/2)
+            num_cell, est_len = crosspeak_counter(phi[Ntip-50,:], dxd, 0)
+            est_pri = lxd/num_cell
+            #print(est_pri) estimated primary spacing
+            Npri = round(est_pri/dxd)
+            alpha = tilted_angle(phi[imid:imid+10,:], phi[0:10,:], imid, Npri, int(np.sign(alpha0)))
+            alpha_arr[kqs] = alpha
+            #print('the measured growth angle is: ', alpha)
+            phi = plumb(phi,alpha)
+            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)
+            
+        phi_cp = tcp(phi,Ntip,-5); Tz_cp = tcpa(Tz,Ntip,-5)
+        fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
+        fs_arr = np.vstack(( fs_arr, fs ))
+        
     # print & save data 
     if (2*nt+2)%kts==0:
        
@@ -628,4 +666,5 @@ end = time.time()
 print('elapsed time: ', (end-start))
 
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start } )
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'ztip':ztip_arr,'Tip':Ttip_arr,'inter_len':inter_len,'pri_spac':pri_spac,\
+    'sec_spac':sec_spac,'alpha':alpha_arr,'fs':fs_arr } )
