@@ -13,8 +13,8 @@ import math
 
 def phys_para():    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
-    G = 1                        # thermal gradient        K/um
-    R = 0.02*1E6                          # pulling speed           um/s
+    G = 6.6*1E5 / 1E6                        # thermal gradient        K/um
+    R = 0.3*1E6                          # pulling speed           um/s
     delta = 0.01                    # strength of the surface tension anisotropy         
     k = 0.14                        # interface solute partition coefficient
     c_infm = 10.4                  # shift in melting temperature     K
@@ -26,14 +26,20 @@ def phys_para():
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
     tau0 = 0.6267*lamd*W0**2/Dl     # time scale               s
     
-    c_infty = 4    
+    
+    c_infty = 4.0
+    Te = 821
+    Tm = 933.47
+    Ti = 900
+    U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
     # non-dimensionalized parameters based on W0 and tau0
     
     R_tilde = R*tau0/W0
     Dl_tilde = Dl*tau0/W0**2
     lT_tilde = lT/W0
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Ti, U_0
+
 
 def simu_para(W0,Dl_tilde):
     
@@ -41,30 +47,31 @@ def simu_para(W0,Dl_tilde):
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 2                  	# aspect ratio
-    nx = 800            		# number of grids in x   nx*aratio must be int
+    asp_ratio = 1                  	# aspect ratio
+    nx = 1000            		# number of grids in x   nx*aratio must be int
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
-    dt = 0.1*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 200000                      	# total  number of time steps
+    dt = (0.2)*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
+    print('dt = ',dt)
+    Mt = 500000                      	# total  number of time steps
 
-    eta = 0.00                		# magnitude of noise
+    eta = 0.04                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
-    U0 = - 1.0                		# initial value for U, -1 < U0 < 0
+    # U0 = -0.7                		# initial value for U, -1 < U0 < 0
     nts = 10				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
-    ictype = 2                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    ictype = 1                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
-    direc = '/scratch/07428/ygqin/data'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    direc = './' #'/scratch/07429/yxbao/am_run'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    
+    qts = nts
     
     
 
-    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, direc, mv_flag, tip_thres, \
-           ictype
+    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
+           ictype, qts
 
 def seed_initial(xx,lx,zz): 
     
@@ -75,9 +82,9 @@ def seed_initial(xx,lx,zz):
     return psi0
 
 
-def planar_initial(lx,zz):
+def planar_initial(lz,zz):
     
-    z0 = lx*0.01                   # initial location of interface in W0   
+    z0 = lz*0.01                   # initial location of interface in W0   
     psi0 = z0 - zz
     
     return psi0
@@ -96,7 +103,7 @@ def sum_sine_initial(lx,nx,xx,zz):
     sp = 0*zz
     for kk in range(k_max):
        
-        sp = sp + A[kk]*np.sin(2*pi*kk/lx* (xx-x_c[kk]) );
+        sp = sp + A[kk]*np.sin(2*math.pi*kk/lx* (xx-x_c[kk]) );
         
     psi0 = -(zz-z0-sp)
     

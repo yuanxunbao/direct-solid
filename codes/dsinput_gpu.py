@@ -38,7 +38,7 @@ def phys_para():
     lT_tilde = lT/W0
 
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Te, U_0
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Ti, U_0
   
 def simu_para(W0,Dl_tilde):
     
@@ -51,7 +51,7 @@ def simu_para(W0,Dl_tilde):
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 500000                      	# total  number of time steps
+    Mt = 100000                      	# total  number of time steps
 
     eta = 0.0                		# magnitude of noise
 

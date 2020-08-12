@@ -27,20 +27,22 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Te, U_0 = PARA.phys_para()
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Ti, U_0 = PARA.phys_para()
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'dirsolid'+ '_G'+str('%4.1E'%(G*1e6)) + '_R'+str('%4.2F'%(R/1e6)) + '_noise'+ \
-str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_U0'+str(U_0)+'.mat'
+filename = 'dirsolid2'+ '_G'+str('%4.1E'%(G*1e6)) + '_R'+str('%4.2F'%(R/1e6)) + '_noise'+ \
+str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_U0'+str('%4.2E'%U_0)+'.mat'
+
 
 '''
 -------------------------------------------------------------------------------------------------
 CAST PARAMETERS INTO FLOAT32
 -------------------------------------------------------------------------------------------------
 '''
+
 delta = float64(delta)
 k = float64(k)
 lamd = float64(lamd)
@@ -90,6 +92,7 @@ dt_sqrt =  float64( np.sqrt(dt) )
 
 dxd = dx*W0; lxd = lx*W0
 
+
 '''
 -------------------------------------------------------------------------------------------------
 ALLOCATE SPACE FOR OUTPUT ARRAYS
@@ -98,6 +101,7 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
+
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -188,8 +192,7 @@ def aptheta(ux, uz):
 # set boundary conditions cpu version
 def setBC_cpu(u,BCx,BCy):
     
-    # 0 periodic, 1 no flux (Neumann)
-    
+    # 0 periodic, 1 no flux (Neumann)    
     if BCx == 0 :
                 
         u[ 0,:] = u[-2,:] # 1st =  last - 1
@@ -209,8 +212,7 @@ def setBC_cpu(u,BCx,BCy):
         
         u[:,0] = u[:,2]
         u[:,-1] = u[:,-3]
-        
-        
+                
     return u
 
 
@@ -578,7 +580,7 @@ kts = int(Mt/nts);
 interq = int(Mt/qts)
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_arr = []; ztip_arr = np.zeros(qts); Ttip_arr = np.zeros(qts); 
-alpha_arr = np.zeros(nz,qts);
+alpha_arr = np.zeros((nz,qts));
 start = time.time()
 # march two steps per loop
 for nt in range(int(Mt/2)):
@@ -666,5 +668,10 @@ end = time.time()
 print('elapsed time: ', (end-start))
 
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
+
+'''
+save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'ztip':ztip_arr,'Tip':Ttip_arr,'inter_len':inter_len,'pri_spac':pri_spac,\
     'sec_spac':sec_spac,'alpha':alpha_arr,'fs':fs_arr } )
+'''

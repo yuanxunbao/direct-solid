@@ -26,6 +26,12 @@ def phys_para():
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
     tau0 = 0.6267*lamd*W0**2/Dl     # time scale               s
     
+
+
+    print('tau0 = ', tau0) 
+    
+
+
     c_infty = 4.0
     
     # non-dimensionalized parameters based on W0 and tau0
@@ -48,8 +54,8 @@ def simu_para(W0,Dl_tilde):
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.2*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 125000                      	# total  number of time steps
-
+    Mt = 500000                      	# total  number of time steps
+    print('dt', dt)
     eta = 0.04                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
