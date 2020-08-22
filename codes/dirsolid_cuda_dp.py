@@ -20,21 +20,25 @@ from QoIs import *
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
 
-
 '''
 -------------------------------------------------------------------------------------------------
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R, Ti, U_0 = PARA.phys_para()
-eps, alpha0, lxd, aratio, nx, dt, Mt, eta, \
+delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
+eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
+
+# dimensionalize
+lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'dirsolid2'+ '_G'+str('%4.1E'%(G*1e6)) + '_R'+str('%4.2F'%(R/1e6)) + '_noise'+ \
-str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(aratio)+'_U0'+str('%4.2E'%U_0)+'.mat'
+filename = 'dirsolid'+ '_G'+str('%4.2F'%G) + '_R'+str('%4.2F'%R) + '_noise'+ \
+str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
+'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'.mat'
+
 
 
 '''
@@ -54,7 +58,7 @@ tau0 = float64(tau0)
 
 eps = float64(eps)
 alpha0_rad = float64(alpha0*math.pi/180)
-lxd = float64(lxd)
+lx = float64(lx)
 nx = int32(nx)
 dt = float64(dt)
 Mt = int32(Mt)
@@ -72,7 +76,6 @@ a_12 = float64(4.0*a_s*epsilon)
 sqrt2 = float64(np.sqrt(2.0))
 
 
-lx = float64(lxd/W0) # non-dimensionalize
 lz = float64(aratio*lx)
 nz = int32(aratio*nx+1)
 nv= nz*nx #number of variables
@@ -90,9 +93,20 @@ hi= float64( 1./dx )
 
 dt_sqrt =  float64( np.sqrt(dt) )
 
-dxd = dx*W0; lxd = lx*W0
+dxd = dx*W0
 
-
+print('==========================================\n')
+print('W0 = %4.2E um'% W0)
+print('tau0 = %4.2E s'%tau0)
+print('dx = %4.2E um'%(dx*W0))
+print('dt = %4.2E s'%(dt*tau0))
+print('lambda = ', lamd)
+print('Mt = ', Mt)
+print('U0 = ', U_0)
+print('grid = %d x %d'%(nx,nz))
+print('dx-dz = ', dx-dz)
+print('==========================================\n')
+#
 '''
 -------------------------------------------------------------------------------------------------
 ALLOCATE SPACE FOR OUTPUT ARRAYS
@@ -509,16 +523,39 @@ if ictype == 0:
 
 elif ictype == 1:
   
-    psi0 = PARA.planar_initial(lz,zz)
-    U0 = 0*psi0 + U_0
+    z0 = lz*0.02
+    psi0 = PARA.planar_initial(lz,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
+
+    U0 = 0*psi0 + U_0 
+
 
 elif ictype == 2:
 
-    psi0 = PARA.sum_sine_initial(lx,nx,xx,zz)
-    U0 = 0*psi0 + U_0
+    z0 = lz * 0.0
+    psi0 = PARA.sum_sine_initial(lx,nx,xx,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
-   
+
+    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+    c_sol = c_inf
+
+    U0 = 0*psi0 + U_0
+#    U0 = 0 * (phi0 >= 0.0 ) + \
+#         (k*c_liq/c_infty-1)/(1-k) * (phi0 < 0.0)
+
+elif ictype == 3:
+
+    z0 = lz*0.0
+    psi0 = PARA.planar_initial(lz,zz,z0)
+    phi0 = np.tanh(psi0/sqrt2)
+    
+    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+    c_sol = c_inf
+
+    U0 = 0 * (phi0 >= 0.0 ) + \
+         (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
+
+    
 else: 
     print('ERROR: invalid type of initial condtion...' )
     sys.exit(1)
@@ -576,10 +613,14 @@ print('2d threads per block: ({0:2d},{1:2d})'.format(tpb2d[0], tpb2d[1]))
 print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-kts = int(Mt/nts);
-interq = int(Mt/qts)
+# must be even
+kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
+interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
+
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_arr = []; ztip_arr = np.zeros(qts); Ttip_arr = np.zeros(qts); 
+fs_arr = []; ztip_arr = np.zeros(qts); 
+Ttip_arr = np.zeros(qts);
+tip_uq = np.zeros(qts); 
 alpha_arr = np.zeros((nz,qts));
 start = time.time()
 # march two steps per loop
@@ -619,7 +660,7 @@ for nt in range(int(Mt/2)):
 
            cur_tip = cur_tip-1
 
-
+    '''    
     #save QoIs
     if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
         
@@ -651,24 +692,35 @@ for nt in range(int(Mt/2)):
         phi_cp = tcp(phi,Ntip,-5); Tz_cp = tcpa(Tz,Ntip,-5)
         fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
         fs_arr = np.vstack(( fs_arr, fs ))
-        
+    '''
+
+    if (2*nt+2)%interq ==0:
+        kqs = int(np.floor((2*nt+2)/interq))-1
+        zz_cpu = zz_gpu.copy_to_host()
+        Ttip_arr[kqs] = Ti + G*( zz_cpu[3,cur_tip]- R_tilde*(2*nt+2)*dt )*W0
+        tip_uq[kqs] = 1. - (zz_cpu[3,cur_tip]-R_tilde*(2*nt+2)*dt)/ lT_tilde 
+           
     # print & save data 
     if (2*nt+2)%kts==0:
        
        print('time step = ', 2*(nt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
 
+
        kk = int(np.floor((2*nt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       zz_cpu = zz_gpu.copy_to_host()	
+       zz_cpu = zz_gpu.copy_to_host()
+       # print(zz_cpu.shape)
+       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        order_param[:,[kk]], conc[:,[kk]], zz_mv[:,[kk]] = save_data(phi,U,zz_cpu)
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
+
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq} )
 
 '''
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
