@@ -21,7 +21,6 @@ from QoIs import *
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
 
-
 '''
 -------------------------------------------------------------------------------------------------
 LOAD PARAMETERS
@@ -32,7 +31,8 @@ delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti,
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
 
-lxd = lx*W0
+# dimensionalize
+lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
@@ -40,59 +40,73 @@ filename = 'dirsolid_varGR' + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'.mat'
 
+
 '''
 -------------------------------------------------------------------------------------------------
 LOAD MACRO CONDITIONS:
 macro time, G(t), R(t)
 -------------------------------------------------------------------------------------------------
 '''
+'''
+# transient time
+Mt1=60000
+Ttrans = (Mt1*dt)*tau0
 
-# d_macro = sio.loadmat('trajectory.mat')
+Mt = Mt1 + 540000
+Tend = (Mt*dt)*tau0
+t_macro = np.linspace(Ttrans,Tend,num=50)
+t_macro = np.append([0], t_macro)
 
-# t_idx = np.arange(8,25) # a subset of time 
-# pt_idx = 6 # idx of trajectory to sample 
-# Gt = d_macro['G_'][pt_idx,t_idx]*1E-6   # K / um
-# Rt = d_macro['R_'][pt_idx,t_idx]*1E+6   # um / s
-# t_macro = d_macro['time_'][pt_idx,t_idx] # s
-# t_mac0 = t_macro[0] 
-# t_macro = (t_macro - t_mac0)  # in sec
+Gt = np.linspace(0.35,0.15,num=50)
+Gt = np.append([0.35], Gt)
 
+Rt = np.linspace(0, R*Tend, num=50)
+Rt = np.append([0],Rt)
+'''
 
 Tp = 926          # K
-Tl = 922.9              # K
+Tl = 833              # K
 al = 3400             # um
 bl = 6200             # um
-V =  2500            # um/s 
+V =  2500            # um/s
 aob = al/bl
 
-t_macro = np.linspace(0,0.3,100) # in s
+Mt1 = 40000
+Ttrans = (Mt1*dt)*tau0
+t_macro = np.linspace(0, Mt*dt*tau0, num=100) # in s
 Gt = (Tp-Tl) / np.sqrt( (V*t_macro)**2*(1-aob**2) + aob**2)
-Gt[0] = Gt[1]
-Rt = al*V**2*t_macro / np.sqrt( (V*t_macro)**2*(al**2-bl**2) + (bl**2)**2 )
-t_macro_tilde = t_macro / tau0
+#Gt[0] = Gt[1]
 
-# Gt = G * np.ones(t_macro.shape[0])
-# Rt = R * np.ones(t_macro.shape[0])
+# Gt = 0.35*np.ones(t_macro.shape[0])
+# Gt = np.linspace(0.35,0.05,num=100)
+Rt = al*V**2*t_macro / np.sqrt( (V*t_macro)**2*(al**2-bl**2) + (bl**2)**2 )
+
+t_macro = np.append([0], t_macro+Ttrans)
+Rt = np.append([0],Rt)
+Gt = np.append(Gt[0], Gt)
 
 # set it for now, in seconds
-#  Tend = (Mt*dt)*tau0
-# t_macro = np.linspace(0,Tend,num=50) # in sec
-# Gt = 0.02 * np.ones(t_macro.shape[0])
-# Rt = 50 * np.ones(t_macro.shape[0])
+'''
+Mt = 1000
+Tend = (Mt*dt)*tau0
+t_macro = np.linspace(0,Tend,num=50) # in sec
+# print(t_macro.shape)
+Gt = G * np.ones(t_macro.shape[0])
+Rt = np.linspace(0, R*Tend, t_macro.shape[0])
+'''
 
 # lT_tilde and R_tilde as function of t
 # lT_tilde_var = (lT_tilde * G) / Gt
 # _tilde_var = (R_tilde / R) * Rt
 
-# t_macro_tilde = t_macro / tau0 # in tau0
+t_macro_tilde = t_macro / tau0 # in tau0
 
 # actual Mt and dt
 Mt = 2*np.ceil(t_macro_tilde[-1]/ dt /2 );
 dt = t_macro_tilde[-1]/Mt
 
-# print(lT_tilde_var)
-# print(R_tilde_var)
-# print(t_macro_tilde)
+print(Mt)
+
 '''
 -------------------------------------------------------------------------------------------------
 CAST PARAMETERS INTO FLOAT32
@@ -102,9 +116,9 @@ CAST PARAMETERS INTO FLOAT32
 delta = float64(delta)
 k = float64(k)
 lamd = float64(lamd)
-# R_tilde = float64(R_tilde)
+R_tilde = float64(R_tilde)
 Dl_tilde = float64(Dl_tilde)
-# lT_tilde = float64(lT_tilde)
+lT_tilde = float64(lT_tilde)
 W0 = float64(W0)
 tau0 = float64(tau0)
 
@@ -128,7 +142,6 @@ a_12 = float64(4.0*a_s*epsilon)
 sqrt2 = float64(np.sqrt(2.0))
 
 
-# lx = float64(lxd/W0) # non-dimensionalize
 lz = float64(aratio*lx)
 nz = int32(aratio*nx+1)
 nv= nz*nx #number of variables
@@ -146,23 +159,23 @@ hi= float64( 1./dx )
 
 dt_sqrt =  float64( np.sqrt(dt) )
 
-dxd = dx*W0; 
+dxd = dx*W0
 
 print('==========================================\n')
 print('W0 = %4.2E um'% W0)
-print('tau0 = %4.2E s'%tau0)
+print('tau0 = %4.12E s'%tau0)
 print('dx = %4.2E um'%(dx*W0))
-print('dt = %4.2E s'%(dt*tau0))
+print('dt = %4.12E s'%(dt*tau0))
 print('lambda = ', lamd)
 print('Mt = ', Mt)
 print('U0 = ', U_0)
 print('grid = %d x %d'%(nx,nz))
 print('dx-dz = ', dx-dz)
 print('==========================================\n')
+
 print('Gt = ', Gt)
-print('Vt = ', Rt)
-
-
+print('Rt = ', Rt)
+print('t_macro', t_macro)
 '''
 -------------------------------------------------------------------------------------------------
 ALLOCATE SPACE FOR OUTPUT ARRAYS
@@ -206,7 +219,8 @@ def compute_tip_pos(cur_tip,sum_arr, phi):
         if (mean_along_z > -0.99):
             cur_tip += 1
         else: 
-            return cur_tip
+            cur_tip_x = np.argmax(phi[:,cur_tip])
+            return cur_tip_x, cur_tip
 
 @njit
 def set_halo(u):
@@ -238,7 +252,7 @@ def atheta(ux, uz):
         return a_s*( 1 + epsilon*(ux2**2 + uz2**2) / MAG_sq2   )
         # return uz/MAG_sq2
     else:
-        return 1.0 #a_s
+        return 1.0 # a_s
     
     
 @cuda.jit('float64(float64, float64)',device=True)
@@ -287,7 +301,7 @@ def setBC_cpu(u,BCx,BCy):
 
 
 @cuda.jit
-def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde,  rng_states):
+def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, rng_states):
     # ps = psi, ph = phi
 
     i,j = cuda.grid(2)
@@ -385,10 +399,11 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde,  rng_sta
         #
         # =============================================================
 
-        
+        # print(lT_tilde)         
         # Up = (zz[i,j] - R_tilde * (nt*dt) )/lT_tilde
-        Up = ( zz[i,j] - intR ) / lT_tilde
-  
+        # Up = (zz[i,j]-z0 - R_tilde * (nt*dt) )/lT_tilde
+        Up = ( zz[i,j] - intR ) / lT_tilde  
+   
         rhs_psi = ((JR-JL) + (JT-JB) + extra) * hi**2 + \
                    sqrt2*ph[i,j] - lamd*(1-ph[i,j]**2)*sqrt2*(U[i,j] + Up)
 
@@ -408,7 +423,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde,  rng_sta
         beta_ij = xoroshiro128p_uniform_float64(rng_states, threadID) - 0.5 # rand from  [-0.5, 0.5]
         
         # update psi and phi
-        ps_new[i,j] = ps[i,j] + ( dt * dpsi[i,j] + dt_sqrt*dxdz_in_sqrt*eta * beta_ij ) 
+        ps_new[i,j] = ps[i,j] +  dt * dpsi[i,j] + ( dt_sqrt*dxdz_in_sqrt*eta * beta_ij ) * (t_cur > Ttrans) 
         ph_new[i,j] = math.tanh(ps_new[i,j]/sqrt2)
 
 
@@ -541,6 +556,7 @@ def rhs_U(U, U_new, ph, dpsi):
         phx = phipjm - phimjm
         phz = ph[i+0,j+0]-ph[i+0,j-1]
         phn2 = phx**2 + phz**2
+        nz = phz / math.sqrt(phn2) if (phn2 > eps) else 0.
         
         jat_jm = 0.5*(1+(1-k)*U[i+0,j-1])*(1-ph[i+0,j-1]**2)*dpsi[i+0,j-1]      
         
@@ -571,19 +587,19 @@ def save_data(phi,U,zz):
 
 
 ##############################################################################
-if ictype == 0:
+if ictype == 0: 
 
     psi0 = PARA.seed_initial(xx,lx,zz)
     U0 = 0*psi0 + U_0
     phi0 = np.tanh(psi0/sqrt2)
 
 elif ictype == 1:
-
+  
     z0 = lz*0.0
     psi0 = PARA.planar_initial(lz,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
 
-    U0 = 0*psi0 + U_0
+    U0 = 0*psi0 + U_0 
 
 
 elif ictype == 2:
@@ -592,7 +608,7 @@ elif ictype == 2:
     psi0 = PARA.sum_sine_initial(lx,nx,xx,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
 
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0)
+    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
     c_sol = c_inf
 
     U0 = 0*psi0 + U_0
@@ -604,19 +620,34 @@ elif ictype == 3:
     z0 = lz*0.0
     psi0 = PARA.planar_initial(lz,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
-
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0)
+    
+    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
     c_sol = c_inf
 
     U0 = 0 * (phi0 >= 0.0 ) + \
-         (k*c_liq/c_infty-1)/(1-k) * (phi0 < 0.0)
+         (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
 
+elif ictype == 4:
 
-else:
+    z0 = lz*0.0
+    psi0 = PARA.planar_initial(lz,zz,z0)
+    phi0 = np.tanh(psi0/sqrt2)
+    U0 = 0*psi0 + U_0
+
+    dd = sio.loadmat('initial1d.mat')
+    psi_1d = dd['psi_1d']
+    phi_1d = dd['phi_1d']
+    U_1d   = dd['U_1d']
+
+    nic = psi_1d.shape[1]
+
+    psi0[:, 0:nic] = psi_1d
+    phi0[:, 0:nic] = phi_1d
+    U0[:,   0:nic] = U_1d
+    
+else: 
     print('ERROR: invalid type of initial condtion...' )
     sys.exit(1)
-
-
 
 
 intR = 0.
@@ -673,53 +704,54 @@ print('2d threads per block: ({0:2d},{1:2d})'.format(tpb2d[0], tpb2d[1]))
 print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-kts = int( 2*np.floor((Mt/nts)/2) ); print(kts)
-interq = int( 2*np.floor(Mt/qts/2) ); print(interq)
+# must be even
+kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
+interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
+
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_arr = []; ztip_arr = np.zeros(qts); 
-Ttip_arr = np.zeros(qts); 
-tip_uq = np.zeros(qts);
+Ttip_arr = np.zeros(qts);
+tip_uq = np.zeros(qts); 
 alpha_arr = np.zeros((nz,qts));
 start = time.time()
 # march two steps per loop
-for nt in range(int(Mt/2)):
+for kt in range(int(Mt/2)):
    
     # =================================================================
     # time step: t = (2*nt) * dt
     # =================================================================
-    t_cur = (2*nt)*dt*tau0
+    t_cur = (2*kt)*dt*tau0
     G_cur = np.interp(t_cur, t_macro, Gt)
-    lT = c_inf * m_slope * (1.0/k-1) / G_cur 
-    lT_tilde = lT/W0
- 
+    lT_tilde = (c_inf*m_slope*(1.0/k-1)/G_cur) / W0 
     R_cur = np.interp(t_cur, t_macro, Rt)
-    intR += (R_cur*tau0/W0) * dt
-
-    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, zz_gpu, dPSI, intR, lT_tilde, rng_states)
+    
+    # intR = R_tilde * (2*kt*dt) 
+    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, zz_gpu, dPSI, intR, lT_tilde, t_cur,  rng_states)
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
-
+    intR += (R_cur*tau0/W0)*dt
+   
     # =================================================================
     # time step: t = (2*nt+1) * dt
     # ================================================================= 
-    t_cur = (2*nt+1)*dt
+    
+    t_cur = (2*kt+1)*dt*tau0
     G_cur = np.interp(t_cur, t_macro, Gt)
-    lT = c_inf * m_slope * (1.0/k-1) / G_cur 
-    lT_tilde = lT/W0
- 
+    lT_tilde = (c_inf*m_slope*(1.0/k-1)/G_cur) / W0 
     R_cur = np.interp(t_cur, t_macro, Rt)
-    intR += (R_cur*tau0/W0) * dt
-
-    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, zz_gpu, dPSI, intR, lT_tilde, rng_states)
+ 
+    # intR = R_tilde *(2*kt+1)*dt
+    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, zz_gpu, dPSI, intR, lT_tilde, t_cur, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
-   
+    intR += (R_cur*tau0/W0)*dt   
+
     # =================================================================
     # If moving frame flag is set to TRUE
     # =================================================================
     if mvf == True :
         # update tip position    
-       cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
+       cur_tip_x, cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
  
        # when tip hit tip_thres, shift down by 1
        while cur_tip >= tip_thres:
@@ -734,7 +766,7 @@ for nt in range(int(Mt/2)):
 
            cur_tip = cur_tip-1
 
-    '''        
+    '''    
     #save QoIs
     if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
         
@@ -767,33 +799,39 @@ for nt in range(int(Mt/2)):
         fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
         fs_arr = np.vstack(( fs_arr, fs ))
     '''
-    if (2*nt+2)%1 ==0:
-        kqs = int(np.floor((2*nt+2)/interq))-1
-        zz_cpu = zz_gpu.copy_to_host()
-        Ttip_arr[kqs] = Ti + G_cur * ( zz_cpu[3,cur_tip]- intR )*W0
-        tip_uq[kqs] = 1. - ( zz_cpu[3,cur_tip] ) / lT_tilde
-        print('tip undercooling = ', tip_uq[kqs])
-        print('tip undercooling = ', Ti - Ttip_arr[kqs])
 
+    if (2*kt+2)%interq ==0:
+        kqs = int(np.floor((2*kt+2)/interq))-1
+        zz_cpu = zz_gpu.copy_to_host()
+        Ttip_arr[kqs] = Ti + G*( zz_cpu[3,cur_tip]- R_tilde*(2*kt+2)*dt )*W0
+        tip_uq[kqs] = 1. - (zz_cpu[3,cur_tip]-R_tilde*(2*kt+2)*dt)/ lT_tilde 
+           
     # print & save data 
-    if (2*nt+2)%kts==0:
-         
-       print('time step = ', 2*(nt+1) )
+    if (2*kt+2)%kts==0:
+       
+       print('time step = ', 2*(kt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
 
-       kk = int(np.floor((2*nt+2)/kts))
+
+       kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       zz_cpu = zz_gpu.copy_to_host()	
+       psi = psi_old.copy_to_host()
+       zz_cpu = zz_gpu.copy_to_host()
+       # print(zz_cpu.shape)
+       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        order_param[:,[kk]], conc[:,[kk]], zz_mv[:,[kk]] = save_data(phi,U,zz_cpu)
 
 
-        
-
 end = time.time()
 print('elapsed time: ', (end-start))
+
+
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-starti, 'Ttip_arr':Ttip_arr, 'tip_uq':tip_uq})
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq, 'tip_x':cur_tip_x, 'Gt':Gt, 'Rt':Rt, 't_macro':t_macro} )
+
+
+# save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi})
 
 '''
 save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
