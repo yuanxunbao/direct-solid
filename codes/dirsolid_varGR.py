@@ -27,9 +27,13 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
+delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro  = PARA.phys_para()
+
+
+print(t_macro.shape)
+
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
 
 # dimensionalize
 lxd = lx * W0
@@ -38,7 +42,7 @@ mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid_varGR' + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
-'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'.mat'
+'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)
 
 
 '''
@@ -64,27 +68,6 @@ Rt = np.linspace(0, R*Tend, num=50)
 Rt = np.append([0],Rt)
 '''
 
-Tp = 926          # K
-Tl = 833              # K
-al = 3400             # um
-bl = 6200             # um
-V =  2500            # um/s
-aob = al/bl
-
-Mt1 = 40000
-Ttrans = (Mt1*dt)*tau0
-t_macro = np.linspace(0, Mt*dt*tau0, num=100) # in s
-Gt = (Tp-Tl) / np.sqrt( (V*t_macro)**2*(1-aob**2) + aob**2)
-#Gt[0] = Gt[1]
-
-# Gt = 0.35*np.ones(t_macro.shape[0])
-# Gt = np.linspace(0.35,0.05,num=100)
-Rt = al*V**2*t_macro / np.sqrt( (V*t_macro)**2*(al**2-bl**2) + (bl**2)**2 )
-
-t_macro = np.append([0], t_macro+Ttrans)
-Rt = np.append([0],Rt)
-Gt = np.append(Gt[0], Gt)
-
 # set it for now, in seconds
 '''
 Mt = 1000
@@ -101,9 +84,6 @@ Rt = np.linspace(0, R*Tend, t_macro.shape[0])
 
 t_macro_tilde = t_macro / tau0 # in tau0
 
-# actual Mt and dt
-Mt = 2*np.ceil(t_macro_tilde[-1]/ dt /2 );
-dt = t_macro_tilde[-1]/Mt
 
 print(Mt)
 
@@ -116,9 +96,9 @@ CAST PARAMETERS INTO FLOAT32
 delta = float64(delta)
 k = float64(k)
 lamd = float64(lamd)
-R_tilde = float64(R_tilde)
+# R_tilde = float64(R_tilde)
 Dl_tilde = float64(Dl_tilde)
-lT_tilde = float64(lT_tilde)
+# lT_tilde = float64(lT_tilde)
 W0 = float64(W0)
 tau0 = float64(tau0)
 
@@ -402,7 +382,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, r
         # print(lT_tilde)         
         # Up = (zz[i,j] - R_tilde * (nt*dt) )/lT_tilde
         # Up = (zz[i,j]-z0 - R_tilde * (nt*dt) )/lT_tilde
-        Up = ( zz[i,j] - intR ) / lT_tilde  
+        Up = ( zz[j] - intR ) / lT_tilde  
    
         rhs_psi = ((JR-JL) + (JT-JB) + extra) * hi**2 + \
                    sqrt2*ph[i,j] - lamd*(1-ph[i,j]**2)*sqrt2*(U[i,j] + Up)
@@ -423,7 +403,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, r
         beta_ij = xoroshiro128p_uniform_float64(rng_states, threadID) - 0.5 # rand from  [-0.5, 0.5]
         
         # update psi and phi
-        ps_new[i,j] = ps[i,j] +  dt * dpsi[i,j] + ( dt_sqrt*dxdz_in_sqrt*eta * beta_ij ) * (t_cur > Ttrans) 
+        ps_new[i,j] = ps[i,j] +  dt * dpsi[i,j] + ( dt_sqrt*dxdz_in_sqrt*eta * beta_ij )  
         ph_new[i,j] = math.tanh(ps_new[i,j]/sqrt2)
 
 
@@ -434,18 +414,24 @@ def moveframe(ps, ph, U, zz, ps_buff, ph_buff, U_buff, zz_buff):
     i,j = cuda.grid(2)
     m,n = ps.shape
 
+    if i == 0 and 0 < j < n-2 :
+        zz_buff[j] = zz[j+1]
+
+    if i == 0 and j == n-2 :
+        zz_buff[j] = 2*zz[n-2] - zz[n-3]
+
     if 0 < i < m-1 and 0 < j < n-2 :
-        
+
         ps_buff[i,j] = ps[i,j+1]
         ph_buff[i,j] = ph[i,j+1]
         U_buff[i,j]  = U[i,j+1]
-        zz_buff[i,j] = zz[i,j+1]
+        # zz_buff[j] = zz[j+1]
 
     if 0 < i < m-1 and j == n-2 :
         ps_buff[i,j] = 2*ps[i,n-2] - ps[i,n-3] # extrapalation
         ph_buff[i,j] = 2*ph[i,n-2] - ph[i,n-3]
-        U_buff[i,j]  = U_0 
-        zz_buff[i,j] = 2*zz[i,n-2] - zz[i,n-3]
+        U_buff[i,j]  = U_0
+        # zz_buff[j] = 2*zz[n-2] - zz[n-3]
 
 @cuda.jit
 def copyframe(ps_buff, ph_buff, U_buff, zz_buff, ps, ph, U, zz):
@@ -453,11 +439,15 @@ def copyframe(ps_buff, ph_buff, U_buff, zz_buff, ps, ph, U, zz):
     i,j = cuda.grid(2)
     m,n = ps.shape
 
+    if i == 0 and 0 < j < n-1 :
+        zz[j] = zz_buff[j]
+
     if 0 < i < m-1 and 0 < j < n-1 :
         ps[i,j] = ps_buff[i,j]
         ph[i,j] = ph_buff[i,j]
         U[i,j]  = U_buff[i,j]
-        zz[i,j] = zz_buff[i,j]
+        # zz[j] = zz_buff[j]
+
 
 
 @cuda.jit
@@ -571,7 +561,7 @@ def rhs_U(U, U_new, ph, dpsi):
 
 
 
-def save_data(phi,U,zz):
+def save_data(phi,U,z):
     
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
@@ -580,7 +570,7 @@ def save_data(phi,U,zz):
    
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') , \
-           zz[[1],1:-1].T 
+           z[1:-1].T 
             
 
 
@@ -657,6 +647,8 @@ psi = set_halo(psi0)
 phi = set_halo(phi0)
 U = set_halo(U0)
 zz = set_halo(zz)
+z_cpu = zz[1,:]
+
 
 # set BCs
 setBC_cpu(psi, 0, 1)
@@ -670,7 +662,7 @@ psi_cpu = psi.astype(np.float64)
 
 
 # save initial data
-order_param[:,[0]], conc[:,[0]], zz_mv[:,[0]] = save_data(phi_cpu, U_cpu, zz )
+order_param[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
 
 
 # allocate space on device
@@ -683,7 +675,8 @@ phi_new = cuda.device_array_like(phi_old)
 U_new = cuda.device_array_like(U_old)
 
 dPSI = cuda.device_array(psi_cpu.shape, dtype=np.float64)
-zz_gpu  = cuda.to_device(zz)
+z_gpu  = cuda.to_device(z_cpu)
+z_gpu_buff = cuda.to_device(z_cpu)
 
 # CUDA kernel invocation parameters
 # cuda 2d grid parameters
@@ -714,6 +707,13 @@ Ttip_arr = np.zeros(qts);
 tip_uq = np.zeros(qts); 
 alpha_arr = np.zeros((nz,qts));
 start = time.time()
+
+# array holds tip z-coord
+ztip_qoi = np.zeros(qts)
+time_qoi = np.zeros(qts)
+tip_vel = np.zeros(qts)
+
+
 # march two steps per loop
 for kt in range(int(Mt/2)):
    
@@ -726,7 +726,7 @@ for kt in range(int(Mt/2)):
     R_cur = np.interp(t_cur, t_macro, Rt)
     
     # intR = R_tilde * (2*kt*dt) 
-    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, zz_gpu, dPSI, intR, lT_tilde, t_cur,  rng_states)
+    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, intR, lT_tilde, t_cur,  rng_states)
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
     intR += (R_cur*tau0/W0)*dt
@@ -741,7 +741,7 @@ for kt in range(int(Mt/2)):
     R_cur = np.interp(t_cur, t_macro, Rt)
  
     # intR = R_tilde *(2*kt+1)*dt
-    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, zz_gpu, dPSI, intR, lT_tilde, t_cur, rng_states)
+    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, intR, lT_tilde, t_cur, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
     intR += (R_cur*tau0/W0)*dt   
@@ -758,8 +758,8 @@ for kt in range(int(Mt/2)):
 
            # new device arrays are used as buffer here, 
            # dPSI are used as buffer for zz
-           moveframe[ bpg2d, tpb2d ](psi_old, phi_old, U_old, zz_gpu, psi_new, phi_new, U_new, dPSI)
-           copyframe[ bpg2d, tpb2d ](psi_new, phi_new, U_new, dPSI, psi_old, phi_old, U_old, zz_gpu)
+           moveframe[ bpg2d, tpb2d ](psi_old, phi_old, U_old, z_gpu, psi_new, phi_new, U_new, z_gpu_buff)
+           copyframe[ bpg2d, tpb2d ](psi_new, phi_new, U_new, z_gpu_buff, psi_old, phi_old, U_old, z_gpu)
         
            # once frame is moved, BC needs to be updated again
            setBC_gpu[bpg,tpb]( psi_old, phi_old, U_old, dPSI  ) 
@@ -802,10 +802,11 @@ for kt in range(int(Mt/2)):
 
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
-        zz_cpu = zz_gpu.copy_to_host()
-        Ttip_arr[kqs] = Ti + G*( zz_cpu[3,cur_tip]- R_tilde*(2*kt+2)*dt )*W0
-        tip_uq[kqs] = 1. - (zz_cpu[3,cur_tip]-R_tilde*(2*kt+2)*dt)/ lT_tilde 
-           
+        z_cpu = z_gpu.copy_to_host()
+        
+        time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
+        ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
+          
     # print & save data 
     if (2*kt+2)%kts==0:
        
@@ -817,18 +818,23 @@ for kt in range(int(Mt/2)):
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
        psi = psi_old.copy_to_host()
-       zz_cpu = zz_gpu.copy_to_host()
+       z_cpu = z_gpu.copy_to_host()
        # print(zz_cpu.shape)
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
-       order_param[:,[kk]], conc[:,[kk]], zz_mv[:,[kk]] = save_data(phi,U,zz_cpu)
+       order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)
 
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
 
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq, 'tip_x':cur_tip_x, 'Gt':Gt, 'Rt':Rt, 't_macro':t_macro} )
+save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
+
+
+
+save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
+'Ttip_arr':Ttip_arr,'tip_uq':tip_uq})
 
 
 # save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi})

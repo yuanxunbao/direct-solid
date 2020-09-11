@@ -16,7 +16,7 @@ def phys_para():
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
     # G = 0.35                        # thermal gradient        K/um
     # R = 500                          # pulling speed           um/s
-    macroGR = sio.loadmat('macroGR_analytical.mat')
+    macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
     Gt = macroGR['G_t']
     Rt = macroGR['R_t']
     t_macro = macroGR['t_macro']
@@ -29,7 +29,7 @@ def phys_para():
     c_infm = m * c_inf                  # shift in melting temperature     K
     Dl = 3000                       # liquid diffusion coefficient      um**2/s
     d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
-    W0 = 0.1132*1                   # interface thickness      um
+    W0 = 0.1132*2                   # interface thickness      um
     
     # lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
@@ -45,30 +45,30 @@ def phys_para():
     U_0 = -1.
     # non-dimensionalized parameters based on W0 and tau0
     
-    R_tilde = R*tau0/W0
+    # R_tilde = R*tau0/W0
     Dl_tilde = Dl*tau0/W0**2
     # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, R_tilde, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro
   
-def simu_para(W0,Dl_tilde, t_macro_tilde):
+def simu_para(W0,Dl_tilde, tend):
     
     eps = 1e-8                      	# divide-by-zero treatment
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 20                  	# aspect ratio
+    asp_ratio = 10                  	# aspect ratio
 	       		                # number of grids in x   nx*aratio must be int
-    lx = 18.1/W0                         # horizontal length in units of W0
+    lx = 18.1*2/W0                         # horizontal length in units of W0
     dx = 0.8
     nx = np.floor(lx/dx)
     
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 2*np.ceil( t_macro_tilde[-1]/(dt/2) ) # total  number of time steps (even number)
-    dt = t_macro_tilde[-1]/Mt
+    Mt = 2*np.ceil( tend/2/dt ) # total  number of time steps (even number)
+    dt = tend/Mt
 
-    eta = 0.08                		# magnitude of noise
+    eta = 0.04                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
