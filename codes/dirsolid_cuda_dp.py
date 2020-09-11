@@ -749,12 +749,6 @@ for kt in range(int(Mt/2)):
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)
 
-       psi = psi[1:-1,1:-1]
-       phi = phi[1:-1,1:-1]
-       U   = U[1:-1,1:-1]
-       tip_x = cur_tip_x
-       tip_z = cur_tip
-
 end = time.time()
 print('elapsed time: ', (end-start))
 
