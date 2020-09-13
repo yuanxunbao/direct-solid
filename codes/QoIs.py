@@ -71,6 +71,11 @@ def tcpa( phi, Ntip, cgrid ):
     Nup = Ntip + cgrid
     return phi[:Nup]
 
+def gener_win_spac():
+    
+    
+    return
+
 ##==================== Eutectic region properties =========================##
 # here phi/c should be cropped by steady state and Te lines
 # Te is eutectic temperature 
@@ -101,11 +106,38 @@ def solute_variability(c, Nss, T, Te):
 
 def interf_len(phi):
     
-    coeff = 1
-    inter_len = np.sum( (1+phi)*(1-phi) )
-    Lf = coeff*inter_len
+    mp, np = phi.shape
+    
+    inter_len = np.sum( (1-phi**2) )
+    Lf = inter_len/(np*np)
     
     return Lf # one number
+
+
+
+def conc_var(phi,c):
+    
+    s_mask = (phi>0)*1
+    l_mask = 1 - s_mask
+    ns = np.sum(s_mask)
+    nl = np.sum(l_mask)
+    
+    Lf = np.sum( 1-phi**2 )    
+    
+    cb_ave = np.sum( (1-phi**2)*c )/Lf
+    cb_var = np.sqrt( np.sum( (1-phi**2)*(c-cb_ave)**2 )/Lf )
+    
+    cs = np.sum( c*s_mask )/ns
+    cs_var = np.sqrt(np.sum( (c-cs)**2*s_mask )/ns)
+    cs_var2 = np.sqrt(np.sum( (c-cs)**2*s_mask*(1-phi**2) )/np.sum(s_mask*(1-phi**2)) )
+    
+    cl = np.sum( c*l_mask )/nl
+    cl_var = np.sqrt(np.sum( (c-cl)**2*l_mask )/nl)
+    cl_var2 = np.sqrt(np.sum( (c-cl)**2*l_mask*(1-phi**2) )/np.sum(l_mask*(1-phi**2)) )
+    
+    
+    return np.array[cb_ave, cb_var, cs, cs_var, cs_var2, cl, cl_var, cl_var2]
+
 
 
 def phi_xstat(phi,Ntip):
@@ -122,7 +154,9 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     
     
    # mui, sigmai, var_phi = phi_xstat(phi,Ntip)
-    mui = np.mean(phi[Ntip-30:Ntip+10,:], axis=0)
+    if Ntip>30:
+        mui = np.mean(phi[Ntip-30:Ntip+10,:], axis=0)
+    else: mui = np.mean(phi[:Ntip+10,:], axis=0)
     cells = identify_peak(mui)
     pri_spac = primary_spacing(mui, lxd, dxd)
     #print(lxd,pri_spac)
@@ -132,7 +166,11 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     else:
         
         # for secondary need to cut
-        phi_cp = tcp(phi,Ntip,-150)
+        if Ntip>100:        
+            phi_cp = tcp(phi,Ntip,-100)   # originally 150
+        else:
+            phi_cp = tcp(phi,Ntip,0)
+            
         sigmai = np.std(phi_cp, axis=0)          #(nx,)
         # further, need to do some filtering for sigmai to ensure sidebranching is big enough
         sec_spac_arr, sides = secondary_spacing(cells, sigmai, phi_cp, dxd)

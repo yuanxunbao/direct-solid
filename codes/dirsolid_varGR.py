@@ -702,7 +702,7 @@ kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
 
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_arr = []; ztip_arr = np.zeros(qts); 
+fs_arr = []; ztip_arr = np.zeros(qts);cqois = []; 
 Ttip_arr = np.zeros(qts);
 tip_uq = np.zeros(qts); 
 alpha_arr = np.zeros((nz,qts));
@@ -802,11 +802,21 @@ for kt in range(int(Mt/2)):
 
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
-        z_cpu = z_gpu.copy_to_host()
-        
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
+        z_cpu = z_gpu.copy_to_host()
         ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
-          
+        phi = phi_old.copy_to_host().T
+        inter_len[kqs] = interf_len(phi)
+        pri_spac[kqs], sec_spac[kqs] = spacings(phi, cur_tip, lxd, dxd, mph)
+        if cur_tip>5:
+                phi_cp = tcp(phi,cur_tip,-5); Tz_cp = tcpa(Tz,cur_tip,-5)
+        else:   phi_cp = tcp(phi,cur_tip,0); Tz_cp = tcpa(Tz,cur_tip,0)
+        fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
+        fs_arr = np.vstack(( fs_arr, fs ))
+        U  = U_old.copy_to_host().T
+        cnc = c_infty* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
+	c_var = conv_var(phi,cnc)
+        cqois = np.vstack(( cqois, c_var ))          
     # print & save data 
     if (2*kt+2)%kts==0:
        
@@ -834,7 +844,8 @@ save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc
 
 
 save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
-'Ttip_arr':Ttip_arr,'tip_uq':tip_uq})
+'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
+})
 
 
 # save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi})
