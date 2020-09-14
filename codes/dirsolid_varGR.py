@@ -41,7 +41,7 @@ lxd = lx * W0
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid_varGR' + '_noise'+ \
-str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
+str('%4.2F'%eta)+str(seed_val)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)
 
 
@@ -700,9 +700,11 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 # must be even
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-
+qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_arr = []; ztip_arr = np.zeros(qts);cqois = []; 
+fs_win = 100
+fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((8,qts));
+HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
 tip_uq = np.zeros(qts); 
 alpha_arr = np.zeros((nz,qts));
@@ -805,18 +807,25 @@ for kt in range(int(Mt/2)):
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
         z_cpu = z_gpu.copy_to_host()
         ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
+        Tz_cur = Ti + G_cur*(z_cpu - intR)*W0
+        Ttip_arr[kqs] = Tz_cur[cur_tip]
         phi = phi_old.copy_to_host().T
         inter_len[kqs] = interf_len(phi)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi, cur_tip, lxd, dxd, mph)
-        if cur_tip>5:
-                phi_cp = tcp(phi,cur_tip,-5); Tz_cp = tcpa(Tz,cur_tip,-5)
-        else:   phi_cp = tcp(phi,cur_tip,0); Tz_cp = tcpa(Tz,cur_tip,0)
-        fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
-        fs_arr = np.vstack(( fs_arr, fs ))
+        fsc=5
+        if cur_tip>fs_win+fsc:
+                phi_cp = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
+                Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
+                fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
+                fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-1 )
+                HCS[kqs], HCS_arr = Kou_HCS(fs_cur, G_cur*dxd)
+                Kc = permeability(fs_cur,pri_spac[kqs], mph)
+                Kc_ave[kqs] = np.mean(Kc) 
+        #fs_arr = np.vstack(( fs_arr, fs ))
         U  = U_old.copy_to_host().T
-        cnc = c_infty* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
-	c_var = conv_var(phi,cnc)
-        cqois = np.vstack(( cqois, c_var ))          
+        cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
+        cqois[:,kqs] = conc_var(phi,cnc)
+       # cqois = np.vstack(( cqois, c_var ))          
     # print & save data 
     if (2*kt+2)%kts==0:
        
@@ -845,7 +854,7 @@ save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc
 
 save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
-})
+'fs_arr':fs_arr,'HCS':HCS,'Kc_ave':Kc_ave})
 
 
 # save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi})

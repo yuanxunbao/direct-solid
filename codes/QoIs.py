@@ -106,10 +106,10 @@ def solute_variability(c, Nss, T, Te):
 
 def interf_len(phi):
     
-    mp, np = phi.shape
+    mphi, nphi = phi.shape
     
     inter_len = np.sum( (1-phi**2) )
-    Lf = inter_len/(np*np)
+    Lf = inter_len/(mphi*nphi)
     
     return Lf # one number
 
@@ -136,7 +136,7 @@ def conc_var(phi,c):
     cl_var2 = np.sqrt(np.sum( (c-cl)**2*l_mask*(1-phi**2) )/np.sum(l_mask*(1-phi**2)) )
     
     
-    return np.array[cb_ave, cb_var, cs, cs_var, cs_var2, cl, cl_var, cl_var2]
+    return np.array([cb_ave, cb_var, cs, cs_var, cs_var2, cl, cl_var, cl_var2])
 
 
 
@@ -154,8 +154,8 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     
     
    # mui, sigmai, var_phi = phi_xstat(phi,Ntip)
-    if Ntip>30:
-        mui = np.mean(phi[Ntip-30:Ntip+10,:], axis=0)
+    if Ntip>100:
+        mui = np.mean(phi[Ntip-100:Ntip+10,:], axis=0)
     else: mui = np.mean(phi[:Ntip+10,:], axis=0)
     cells = identify_peak(mui)
     pri_spac = primary_spacing(mui, lxd, dxd)
@@ -166,10 +166,11 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     else:
         
         # for secondary need to cut
-        if Ntip>100:        
-            phi_cp = tcp(phi,Ntip,-100)   # originally 150
-        else:
-            phi_cp = tcp(phi,Ntip,0)
+        if Ntip>600:        
+            phi_cp = phi[Ntip-600:Ntip-100,:]   # originally 150
+        elif Ntip>100:
+            phi_cp = phi[:Ntip-100,:]
+        else:  phi_cp = phi[:Ntip,:]
             
         sigmai = np.std(phi_cp, axis=0)          #(nx,)
         # further, need to do some filtering for sigmai to ensure sidebranching is big enough
@@ -184,9 +185,12 @@ def spacings(phi, Ntip, lxd, dxd, mph):
 
 def primary_spacing(mui,lxd,dxd):    
 
-    nprim,lenpeak = crosspeak_counter(mui, dxd, -0.3)
+    nprim,lenpeak = crosspeak_counter(mui, dxd, 0)
     
-    return  lxd/nprim  # a number
+    if nprim == 0: pri_spac = 0.0
+    else: pri_spac =  lxd/nprim 
+    return pri_spac
+
 
 
 def secondary_spacing(cells, sigmai, phi_cp, dxd):
@@ -216,7 +220,8 @@ def secondary_spacing(cells, sigmai, phi_cp, dxd):
         
         phi_j = phi_cp[:,sides[ii]] 
         nseco,lside = crosspeak_counter(phi_j, dxd, 0)
-        seco_spac[ii] = lside/nseco
+        if nseco == 0: seco_spac[ii] = 0.0    
+        else: seco_spac[ii] = lside/nseco
         
     return seco_spac, sides    
 
@@ -226,7 +231,8 @@ def crosspeak_counter(u, dx, indicator): # u is a 1D array
     
 
     intersec = np.argwhere(np.diff(np.sign( u - indicator)))
-    dist = intersec[-1]-intersec[0]
+    if len(intersec) == 0: dist = 0
+    else: dist = intersec[-1]-intersec[0]
     
     return int( len(intersec) /2), dist*dx 
 
@@ -243,7 +249,7 @@ def identify_peak(u): # u is a 1D array (nx,)
 #===================== solid fraction fs ==============================#
 # from here, the phi and T should be cropped from whole domain or get from the moving frame
 # T can always be got from cropped z    
-def solid_frac(phi, Ntip, Te, Tz):
+def solid_frac(phi, Te, Tz):
     # T here should be a (nz,) array, same as z variable
     
     mask = 1*(Tz>Te)
@@ -272,7 +278,7 @@ def Kou_HCS(fs, dT):   # input interval of temperature level sets
 
 
 def permeability(fs,lamd, mph):#lambda here is primary spacing
-    
+    fs = fs[fs>1e-2]; fs = fs[fs<1]
     fs2 = fs**2
     if mph =='cell':
         
@@ -284,7 +290,7 @@ def permeability(fs,lamd, mph):#lambda here is primary spacing
         mask_h = 1*(fs>0.35)
         
         Kd_l = 0.074*( np.log( fs**-1 ) -1.49 +2*fs -0.5*fs**2 ) *lamd**2
-        Kd_m = 2.05e-7*( (1-fs)/fs )**10.739 *lamd**2
+        Kd_m = 2.05e-7*( (1-fs)/fs )**10.739 *lamd**2 ;  
         Kd_h = 3.75e-4*(1-fs)**2 *lamd**2
         
         return mask_l*Kd_l + mask_h*Kd_h + (1 - mask_l - mask_h)*Kd_m        # 1D array
