@@ -41,8 +41,8 @@ lxd = lx * W0
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid_varGR' + '_noise'+ \
-str('%4.2F'%eta)+str(seed_val)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
-'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)
+str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
+'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seedval)
 
 
 '''
