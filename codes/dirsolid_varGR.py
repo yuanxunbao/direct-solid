@@ -42,7 +42,7 @@ mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid_varGR' + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
-'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seedval)
+'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val)
 
 
 '''
@@ -598,8 +598,8 @@ elif ictype == 2:
     psi0 = PARA.sum_sine_initial(lx,nx,xx,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
 
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
-    c_sol = c_inf
+#    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+#    c_sol = c_inf
 
     U0 = 0*psi0 + U_0
 #    U0 = 0 * (phi0 >= 0.0 ) + \
@@ -611,8 +611,8 @@ elif ictype == 3:
     psi0 = PARA.planar_initial(lz,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
     
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
-    c_sol = c_inf
+#    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+#    c_sol = c_inf
 
     U0 = 0 * (phi0 >= 0.0 ) + \
          (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
