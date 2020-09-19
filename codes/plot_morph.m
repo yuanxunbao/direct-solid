@@ -1,11 +1,15 @@
+clear;
+
 
 set(0,'defaultaxesfontsize',16)
 set(0,'defaultlinelinewidth',2)
 
 load ./ALCU_GRrun/dirsolid_varGR_traj1_noise0.04_misori0_lx90.50_nx666_asp5_ictype1_U0-1.00seed682.mat
 
-
+sz = size(order_param);
+t_list = linspace(0,Tend,sz(2));
 idx = [10:2:21]; % frames to plot
+
 for ss = 1 : length(idx)
     
     cc = conc(:,idx(ss)); phi = reshape(cc, [nx,nz]);
