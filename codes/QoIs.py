@@ -121,22 +121,26 @@ def conc_var(phi,c):
     l_mask = 1 - s_mask
     ns = np.sum(s_mask)
     nl = np.sum(l_mask)
-    
+    nsi = np.sum(s_mask*(1-phi**2))
+    nli = np.sum(l_mask*(1-phi**2))
+
     Lf = np.sum( 1-phi**2 )    
     
     cb_ave = np.sum( (1-phi**2)*c )/Lf
-    cb_var = np.sqrt( np.sum( (1-phi**2)*(c-cb_ave)**2 )/Lf )
+    cb_var =  np.sum( (1-phi**2)*(c-cb_ave)**2 )/Lf 
     
     cs = np.sum( c*s_mask )/ns
-    cs_var = np.sqrt(np.sum( (c-cs)**2*s_mask )/ns)
-    cs_var2 = np.sqrt(np.sum( (c-cs)**2*s_mask*(1-phi**2) )/np.sum(s_mask*(1-phi**2)) )
+    cs_var = np.sum( (c-cs)**2*s_mask )/ns
+    cs_i = np.sum( c*s_mask*(1-phi**2) )/nsi
+    cs_var_i = np.sum( (c-cs_i)**2*s_mask*(1-phi**2) )/nsi
     
     cl = np.sum( c*l_mask )/nl
-    cl_var = np.sqrt(np.sum( (c-cl)**2*l_mask )/nl)
-    cl_var2 = np.sqrt(np.sum( (c-cl)**2*l_mask*(1-phi**2) )/np.sum(l_mask*(1-phi**2)) )
+    cl_var = np.sum( (c-cl)**2*l_mask )/nl
+    cl_i = np.sum( c*l_mask*(1-phi**2) )/nli
+    cl_var_i = np.sum( (c-cl_i)**2*l_mask*(1-phi**2) )/nli
     
     
-    return np.array([cb_ave, cb_var, cs, cs_var, cs_var2, cl, cl_var, cl_var2])
+    return np.array([cb_ave, cb_var, cs, cs_var, cs_i, cs_var_i, cl, cl_var, cl_i, cl_var_i])
 
 
 
