@@ -27,7 +27,7 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro  = PARA.phys_para()
+delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para()
 
 
 print(t_macro.shape)
@@ -40,7 +40,7 @@ lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'dirsolid_varGR' + '_noise'+ \
+filename = 'dirsolid_varGR_' + ext_name  + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val)
 
@@ -700,10 +700,10 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 # must be even
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-qts = qts+1
+# qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_win = 100
-fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((8,qts));
+fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
 HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
 tip_uq = np.zeros(qts); 
@@ -802,6 +802,8 @@ for kt in range(int(Mt/2)):
         fs_arr = np.vstack(( fs_arr, fs ))
     '''
 
+
+        
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
@@ -826,6 +828,8 @@ for kt in range(int(Mt/2)):
         cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
         cqois[:,kqs] = conc_var(phi,cnc)
        # cqois = np.vstack(( cqois, c_var ))          
+    
+    
     # print & save data 
     if (2*kt+2)%kts==0:
        
