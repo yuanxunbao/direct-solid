@@ -700,7 +700,7 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 # must be even
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-qts = qts+1
+# qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_win = 100
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((8,qts));
@@ -802,6 +802,8 @@ for kt in range(int(Mt/2)):
         fs_arr = np.vstack(( fs_arr, fs ))
     '''
 
+
+        
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
@@ -826,6 +828,8 @@ for kt in range(int(Mt/2)):
         cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
         cqois[:,kqs] = conc_var(phi,cnc)
        # cqois = np.vstack(( cqois, c_var ))          
+    
+    
     # print & save data 
     if (2*kt+2)%kts==0:
        

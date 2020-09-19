@@ -28,12 +28,13 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Temp_macro, t_macro, r_macro  = PARA.phys_para()
+delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Temp_macro, t_macro, r_macro, Gt, Rt  = PARA.phys_para()
 
 
 print(t_macro.shape)
-cl0 = c_inf / m_slope
-interp_Temp = RectBivariateSpline(t_macro, r_macro, Temp_macro)
+cl0 = c_inf / k
+interp_Temp = RectBivariateSpline(t_macro, r_macro, Temp_macro, kx=1,ky=1)
+
 
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
@@ -156,9 +157,11 @@ print('grid = %d x %d'%(nx,nz))
 print('dx-dz = ', dx-dz)
 print('==========================================\n')
 
-print('Gt = ', Gt)
-print('Rt = ', Rt)
-print('t_macro', t_macro)
+# print('Gt = ', Gt)
+# print('Rt = ', Rt)
+# print('t_macro', t_macro)
+
+
 '''
 -------------------------------------------------------------------------------------------------
 ALLOCATE SPACE FOR OUTPUT ARRAYS
@@ -284,7 +287,7 @@ def setBC_cpu(u,BCx,BCy):
 
 
 @cuda.jit
-def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, rng_states, Tdiff):
+def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, t_cur, rng_states, Tdiff):
     # ps = psi, ph = phi
 
     i,j = cuda.grid(2)
@@ -386,7 +389,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, r
         # Up = (zz[i,j] - R_tilde * (nt*dt) )/lT_tilde
         # Up = (zz[i,j]-z0 - R_tilde * (nt*dt) )/lT_tilde
         # Up = ( zz[j] - intR ) / lT_tilde  
-        Up = Tdiff/(1-k)/m_slope/cl0 
+        Up = Tdiff[j]/(1-k)/m_slope/cl0 
    
         rhs_psi = ((JR-JL) + (JT-JB) + extra) * hi**2 + \
                    sqrt2*ph[i,j] - lamd*(1-ph[i,j]**2)*sqrt2*(U[i,j] + Up)
@@ -397,7 +400,7 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, intR, lT_tilde, t_cur, r
         # 4. dpsi/dt term
         #
         # =============================================================
-        tp = (1 - Tdiff)
+        tp = (1 - Tdiff[j]/m_slope/cl0)
         # tp = (1-(1-k)*Up)
         tau_psi = tp*A2 if tp >= k else k*A2
         
@@ -603,8 +606,8 @@ elif ictype == 2:
     psi0 = PARA.sum_sine_initial(lx,nx,xx,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
 
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
-    c_sol = c_inf
+#    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+#    c_sol = c_inf
 
     U0 = 0*psi0 + U_0
 #    U0 = 0 * (phi0 >= 0.0 ) + \
@@ -651,9 +654,9 @@ intR = 0.
 psi = set_halo(psi0)
 phi = set_halo(phi0)
 U = set_halo(U0)
-zz = set_halo(zz)
-z_cpu = zz[1,:]
-
+z_cpu = np.zeros((nz+2))
+z_cpu[1:-1] = z
+T_cur = np.zeros((nz+2))
 
 # set BCs
 setBC_cpu(psi, 0, 1)
@@ -728,16 +731,35 @@ for kt in range(int(Mt/2)):
     t_cur = (2*kt)*dt*tau0
     G_cur = np.interp(t_cur, t_macro, Gt)
     lT_tilde = (c_inf*m_slope*(1.0/k-1)/G_cur) / W0 
-    R_cur = np.interp(t_cur, t_macro, Rt)
-      
-    t_cur_l = t_cur*np.ones(z_cpu.shape[0])
-    T_cur = interp_Temp( t_cur_l, z_cpu)
-    Tdiff = (T_cur - Ti) / (m_slope * cl0)
-     
+    R_cur = np.interp(t_cur, t_macro, Rt) 
+
+    Up1 = ( z_cpu[1:-1] - intR ) / lT_tilde
+
+    T_cur[1:-1] = interp_Temp( t_cur, z_cpu[1:-1]*W0)
+    
+    T_cur2 = Ti + G_cur * (z_cpu[1:-1]-intR)*W0    
+
+    # print(z_cpu*W0)
+
+    # print('hello',T_cur)
+
+    Tdiff = (T_cur - Ti) 
+    Up2 = Tdiff[1:-1]/(1-k)/m_slope/cl0   
+    
+
+    # print(np.linalg.norm(Up1-Up2)/np.linalg.norm(Up1))
+  
+    # print(np.linalg.norm(T_cur[1:-1]-T_cur2)/np.linalg.norm(T_cur2))
+
+    # print( (T_cur[1:-1]-Ti)/(1-k)/m_slope/cl0  )
+    # print( (T_cur2-Ti)/(1-k)/m_slope/cl0 - Up1  )
+
     # intR = R_tilde * (2*kt*dt) 
-    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, intR, lT_tilde, t_cur,  rng_states, Tdiff)
+    rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, t_cur,  rng_states, Tdiff)
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
+    
+
     intR += (R_cur*tau0/W0)*dt
    
     # =================================================================
@@ -745,19 +767,26 @@ for kt in range(int(Mt/2)):
     # ================================================================= 
     
     t_cur = (2*kt+1)*dt*tau0
+    T_cur[1:-1] = interp_Temp( t_cur, z_cpu[1:-1]*W0)
+
+    
+    T_cur2 = Ti + G_cur * (z_cpu[1:-1]-intR)*W0    
+
+
+
     G_cur = np.interp(t_cur, t_macro, Gt)
     lT_tilde = (c_inf*m_slope*(1.0/k-1)/G_cur) / W0 
     R_cur = np.interp(t_cur, t_macro, Rt)
  
-    t_cur_l = t_cur*np.ones(z_cpu.shape[0])
-    T_cur = interp_Temp( t_cur_l, z_cpu)
-    Tdiff = (T_cur - Ti) / (m_slope * cl0)
- 
+    Up1 = ( z_cpu[1:-1]-intR) / lT_tilde
 
-    # intR = R_tilde *(2*kt+1)*dt
-    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, intR, lT_tilde, t_cur, rng_states, Tdiff)
+    Tdiff = (T_cur - Ti)
+    Up2 = Tdiff[1:-1]/(1-k)/m_slope/cl0
+
+    rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, t_cur, rng_states, Tdiff)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
+    
     intR += (R_cur*tau0/W0)*dt   
 
     # =================================================================
@@ -827,6 +856,11 @@ for kt in range(int(Mt/2)):
     if (2*kt+2)%kts==0:
        
        print('time step = ', 2*(kt+1) )
+    
+       print(np.linalg.norm(T_cur[1:-1]-T_cur2)/np.linalg.norm(T_cur2))
+
+
+
        if mvf == True: print('tip position nz = ', cur_tip)
 
 

@@ -16,10 +16,15 @@ def phys_para():
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
     # G = 0.35                        # thermal gradient        K/um
     # R = 500                          # pulling speed           um/s
-    macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
+    # macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
+    macroGR = sio.loadmat('macroGR_const.mat',squeeze_me=True)
     Gt = macroGR['G_t']
     Rt = macroGR['R_t']
     t_macro = macroGR['t_macro']
+    
+    # Gt = Gt[0:20]
+    # Rt = Rt[0:20]
+    # t_macro = t_macro[0:20]
 
 
     delta = 0.01                    # strength of the surface tension anisotropy         
@@ -28,8 +33,8 @@ def phys_para():
     c_inf = 3
     c_infm = m * c_inf                  # shift in melting temperature     K
     Dl = 3000                       # liquid diffusion coefficient      um**2/s
-    d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
-    W0 = 0.1132*2                   # interface thickness      um
+    d0 = 5.0e-3                     # capillary length -- associated with GT coefficient   um
+    W0 = 0.1132                     # interface thickness      um
     
     # lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
@@ -39,10 +44,16 @@ def phys_para():
    
     Te = 821
     Tm = 933.3
-    Ti = Tm- c_infm/k 
+    Tl = Tm - c_infm
+    Ts = Tm - c_infm/k
+    Ti = macroGR['Ti']
+    print(Ti)
+ 
+    cl0 = (Tm - Ti)/m
+
     # U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
     
-    U_0 = -1.
+    U_0 = (c_inf/cl0 - 1)/(1-k)
     # non-dimensionalized parameters based on W0 and tau0
     
     # R_tilde = R*tau0/W0
@@ -68,7 +79,7 @@ def simu_para(W0,Dl_tilde, tend):
     Mt = 2*np.ceil( tend/2/dt ) # total  number of time steps (even number)
     dt = tend/Mt
 
-    eta = 0.04                		# magnitude of noise
+    eta = 0.00                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
@@ -79,7 +90,7 @@ def simu_para(W0,Dl_tilde, tend):
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    qts = 10*nts
+    qts = 20*nts
     
     
 

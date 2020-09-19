@@ -16,12 +16,15 @@ def phys_para():
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
     # G = 0.35                        # thermal gradient        K/um
     # R = 500                          # pulling speed           um/s
-    macroGR = sio.loadmat('FR_check_low.mat',squeeze_me=True)
-    # Gt = macroGR['G_t']
-    # Rt = macroGR['R_t']
+    macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
+    # macroGR = sio.loadmat('compare_temp_var.mat', squeeze_me=True)
+    Gt = macroGR['G_t']
+    Rt = macroGR['R_t']
     Temp_macro = macroGR['T_actual']
-    t_macro = macroGR['t_ma']
-    r_macro = macroGR['r']
+    t_macro = macroGR['t_macro']
+    r_macro = macroGR['r_macro']  	# in um
+
+
 
     delta = 0.01                    # strength of the surface tension anisotropy         
     k = 0.14                        # interface solute partition coefficient
@@ -41,6 +44,7 @@ def phys_para():
     Te = 821
     Tm = 933.3
     Ti = Tm- c_infm/k 
+    print(Ti)
     # U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
     
     U_0 = -1.
@@ -51,7 +55,7 @@ def phys_para():
     # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Temp_macro, t_macro, r_macro
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Temp_macro, t_macro, r_macro, Gt, Rt
   
 def simu_para(W0,Dl_tilde, tend):
     
@@ -69,18 +73,18 @@ def simu_para(W0,Dl_tilde, tend):
     Mt = 2*np.ceil( tend/2/dt ) # total  number of time steps (even number)
     dt = tend/Mt
 
-    eta = 0.04                		# magnitude of noise
+    eta = 0.00                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 20				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
-    ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    ictype = 2                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    qts = 10*nts
+    qts = 4*nts
     
     
 
