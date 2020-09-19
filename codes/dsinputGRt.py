@@ -17,9 +17,9 @@ def phys_para():
     # G = 0.35                        # thermal gradient        K/um
     # R = 500                          # pulling speed           um/s
     macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
-    Gt = macroGR['G_t']
-    Rt = macroGR['R_t']
-    t_macro = macroGR['t_macro']
+    Gt = macroGR['G_t'];#Gt = Gt[0:10]
+    Rt = macroGR['R_t'];#Rt = Rt[0:10]
+    t_macro = macroGR['t_macro'];# t_macro = t_macro[0:10]
 
 
     delta = 0.01                    # strength of the surface tension anisotropy         
@@ -58,9 +58,9 @@ def simu_para(W0,Dl_tilde, tend):
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 10                  	# aspect ratio
+    asp_ratio = 2                  	# aspect ratio
 	       		                # number of grids in x   nx*aratio must be int
-    lx = 18.1*2/W0                         # horizontal length in units of W0
+    lx = 18.1*2/W0*5                         # horizontal length in units of W0
     dx = 0.8
     nx = np.floor(lx/dx)
     
@@ -77,7 +77,7 @@ def simu_para(W0,Dl_tilde, tend):
     tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
     ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
-    direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    direc = '/scratch/07428/ygqin/data'             # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 10*nts
     
