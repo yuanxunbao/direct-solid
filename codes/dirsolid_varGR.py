@@ -41,8 +41,8 @@ lxd = lx * W0
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'dirsolid_varGR' + '_noise'+ \
-str('%4.2F'%eta)+str(seed_val)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
-'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)
+str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
+'_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val)
 
 
 '''
@@ -598,8 +598,8 @@ elif ictype == 2:
     psi0 = PARA.sum_sine_initial(lx,nx,xx,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
 
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
-    c_sol = c_inf
+#    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+#    c_sol = c_inf
 
     U0 = 0*psi0 + U_0
 #    U0 = 0 * (phi0 >= 0.0 ) + \
@@ -611,8 +611,8 @@ elif ictype == 3:
     psi0 = PARA.planar_initial(lz,zz,z0)
     phi0 = np.tanh(psi0/sqrt2)
     
-    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
-    c_sol = c_inf
+#    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R_tilde/Dl_tilde *(zz - z0 )) * (zz >= z0) 
+#    c_sol = c_inf
 
     U0 = 0 * (phi0 >= 0.0 ) + \
          (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
@@ -700,7 +700,7 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 # must be even
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-qts = qts+1
+# qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_win = 100
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
@@ -802,6 +802,8 @@ for kt in range(int(Mt/2)):
         fs_arr = np.vstack(( fs_arr, fs ))
     '''
 
+
+        
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
@@ -826,6 +828,8 @@ for kt in range(int(Mt/2)):
         cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
         cqois[:,kqs] = conc_var(phi,cnc)
        # cqois = np.vstack(( cqois, c_var ))          
+    
+    
     # print & save data 
     if (2*kt+2)%kts==0:
        

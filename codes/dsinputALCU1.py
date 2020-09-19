@@ -51,7 +51,7 @@ def simu_para(W0,Dl_tilde):
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 5                  	# aspect ratio
+    asp_ratio = 10                  	# aspect ratio
 	       		                # number of grids in x   nx*aratio must be int
     lx = 18.1*2/W0                         # horizontal length in units of W0
     dx = 0.8
@@ -63,7 +63,7 @@ def simu_para(W0,Dl_tilde):
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
-    nts = 10				# number snapshots to save, Mt/nts must be int
+    nts = 50				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
     ictype = 2                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
