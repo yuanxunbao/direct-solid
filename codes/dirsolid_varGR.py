@@ -703,7 +703,7 @@ interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
 # qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_win = 100
-fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((8,qts));
+fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
 HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
 tip_uq = np.zeros(qts); 
