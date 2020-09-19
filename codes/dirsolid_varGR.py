@@ -164,7 +164,7 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
-
+t_snapshot=np.zeros(nts+1, dtype=np.float64)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -663,7 +663,7 @@ psi_cpu = psi.astype(np.float64)
 
 # save initial data
 order_param[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
-
+t_snapshot[0] = 0.
 
 # allocate space on device
 psi_old = cuda.to_device(psi_cpu)
@@ -845,14 +845,14 @@ for kt in range(int(Mt/2)):
        # print(zz_cpu.shape)
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)
-
+       t_snapshot[kk] = 2*(kt+1)*dt
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
 
 save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
 
