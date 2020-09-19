@@ -27,7 +27,7 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 
-delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro  = PARA.phys_para()
+delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para()
 
 
 print(t_macro.shape)
@@ -40,7 +40,7 @@ lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'dirsolid_varGR' + '_noise'+ \
+filename = 'dirsolid_varGR_' + ext_name  + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val)
 
