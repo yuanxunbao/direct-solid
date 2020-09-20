@@ -275,14 +275,16 @@ def Kou_HCS(fs, dT):   # input interval of temperature level sets
     sq_fs = np.sqrt(fs)
     dTdfsh = (2*dT )/(sq_fs[2:]-sq_fs[:-2])
     
-    HCS_K_arr = np.absolute( dTdfsh )
-    HCS_K = np.amax( HCS_K_arr )
-    
-    return HCS_K, HCS_K_arr  #a number
+   # HCS_K_arr = np.absolute( dTdfsh )
+   #  HCS_K = np.amax( HCS_K_arr )
+    HCS_k = numpy.linalg.norm(dTdfsh,8)
+	
+
+    return HCS_K, dTdfsh  #a number
 
 
 def permeability(fs,lamd, mph):#lambda here is primary spacing
-    fs = fs[fs>1e-2]; fs = fs[fs<1]
+   # fs = fs[fs>1e-2]; fs = fs[fs<1]
     fs2 = fs**2
     if mph =='cell':
         
