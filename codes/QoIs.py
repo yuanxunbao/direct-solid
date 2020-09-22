@@ -264,7 +264,7 @@ def solid_frac(phi, Te, Tz):
 
 def smooth_fs(fs,winds):
     
-    fs = savgol_filter(fs, winds, 3)  #winds is smaller than size of fs
+    fs = savgol_filter(fs, winds, 1)  #winds is smaller than size of fs
     
     return fs
 
@@ -277,7 +277,7 @@ def Kou_HCS(fs, dT):   # input interval of temperature level sets
     
    # HCS_K_arr = np.absolute( dTdfsh )
    #  HCS_K = np.amax( HCS_K_arr )
-    HCS_k = numpy.linalg.norm(dTdfsh,8)
+    HCS_K = np.linalg.norm(dTdfsh,np.inf)
 	
 
     return HCS_K, dTdfsh  #a number
