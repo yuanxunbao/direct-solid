@@ -35,6 +35,17 @@ print(t_macro.shape)
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
 
+
+
+# calculate snapshot / qoi to save
+kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
+nts = int(Mt/kts); print(nts) 
+interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
+qts = int(Mt/interq); print(qts)
+
+
+
+
 # dimensionalize
 lxd = lx * W0
 
@@ -697,10 +708,6 @@ print('2d threads per block: ({0:2d},{1:2d})'.format(tpb2d[0], tpb2d[1]))
 print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
-# must be even
-kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
-interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-# qts = qts+1
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
 fs_win = 100
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
