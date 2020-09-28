@@ -629,22 +629,15 @@ elif ictype == 3:
          (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
 
 elif ictype == 4:
-
-    z0 = lz*0.0
-    psi0 = PARA.planar_initial(lz,zz,z0)
+    
+    dd = sio.loadmat('transient1d.mat')
+    psi0 = np.repeat( dd['psi_1d'], nx, axis=0)
     phi0 = np.tanh(psi0/sqrt2)
-    U0 = 0*psi0 + U_0
-
-    dd = sio.loadmat('initial1d.mat')
-    psi_1d = dd['psi_1d']
-    phi_1d = dd['phi_1d']
-    U_1d   = dd['U_1d']
-
-    nic = psi_1d.shape[1]
-
-    psi0[:, 0:nic] = psi_1d
-    phi0[:, 0:nic] = phi_1d
-    U0[:,   0:nic] = U_1d
+    U0 = np.repeat( dd['U_1d'], nx, axis=0)
+    zz = np.repeat( dd['z_1d'], nx, axis=0)
+    Ti = dd['Ttip']
+    
+    
     
 else: 
     print('ERROR: invalid type of initial condtion...' )
