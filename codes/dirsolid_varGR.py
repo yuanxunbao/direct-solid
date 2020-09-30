@@ -634,8 +634,13 @@ elif ictype == 4:
     psi0 = np.repeat( dd['psi_1d'], nx, axis=0)
     phi0 = np.tanh(psi0/sqrt2)
     U0 = np.repeat( dd['U_1d'], nx, axis=0)
-    zz = np.repeat( dd['z_1d'], nx, axis=0)
-    Ti = dd['Ttip']
+   # Ti = dd['Ttip'][0]
+   # cl0 = ( 933.3 - Ti )/m_slope
+   # U0 = ( (2*c0/cl0)/(1-phi0+k+k*phi0 )  -1)/(1-k)
+   # U_0 = U0[1,-1]
+    zz = np.repeat( dd['z_1d'], nx, axis=0)/W0
+   #  z_1d = dd['z_1d'][0]
+   # zz,xx = np.meshgrid(z_1d, x)
     
     
     
@@ -652,7 +657,7 @@ phi = set_halo(phi0)
 U = set_halo(U0)
 zz = set_halo(zz)
 z_cpu = zz[1,:]
-
+#print('z_cpu',z_cpu)
 
 # set BCs
 setBC_cpu(psi, 0, 1)
@@ -809,7 +814,9 @@ for kt in range(int(Mt/2)):
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
         z_cpu = z_gpu.copy_to_host()
         ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
+       # print('z-cpu',z_cpu)
         Tz_cur = Ti + G_cur*(z_cpu - intR)*W0
+       # print(Tz_cur.shape)
         Ttip_arr[kqs] = Tz_cur[cur_tip]
         phi = phi_old.copy_to_host().T
         inter_len[kqs] = interf_len(phi)
