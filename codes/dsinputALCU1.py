@@ -10,19 +10,25 @@ Created on Fri May 29 11:10:53 2020
 
 import numpy as np
 import math
+import scipy.io as sio
+
 
 def phys_para():    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
-    G = 0.35                        # thermal gradient        K/um
-    R = 500                          # pulling speed           um/s
+
+    macroGR = sio.loadmat('macroGR_traj1.mat', squeeze_me=True)    
+
+    G = macroGR['G_t'][0]           # thermal gradient        K/um
+    print('G', G) 
+    R = 0.                          # pulling speed           um/s
     delta = 0.01                    # strength of the surface tension anisotropy         
     k = 0.14                        # interface solute partition coefficient
     m = 2.6
     c_inf = 3
-    c_infm = m * c_inf                  # shift in melting temperature     K
+    c_infm = m * c_inf              # shift in melting temperature     K
     Dl = 3000                       # liquid diffusion coefficient      um**2/s
-    d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
-    W0 = 0.1132*2                   # interface thickness      um
+    d0 = 5.0e-3                     # capillary length -- associated with GT coefficient   um
+    W0 = 0.1132*1.5                 # interface thickness      um
     
     lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
@@ -47,30 +53,30 @@ def phys_para():
   
 def simu_para(W0,Dl_tilde):
     
-    eps = 1e-8                      	# divide-by-zero treatment
+    eps = 1e-4                      	# divide-by-zero treatment
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 10                  	# aspect ratio
+    asp_ratio = 100                  	# aspect ratio
 	       		                # number of grids in x   nx*aratio must be int
-    lx = 18.1*2/W0                         # horizontal length in units of W0
-    dx = 0.8
+    lx = 10.0/W0                         # horizontal length in units of W0
+    dx = 1.2
     nx = np.floor(lx/dx)
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 400000                     	# total  number of time steps
+    Mt = 100000                     	# total  number of time steps
 
-    eta = 0.04                		# magnitude of noise
+    eta = 0.0                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
-    nts = 50				# number snapshots to save, Mt/nts must be int
+    nts = 2				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
-    ictype = 2                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    qts = 1*nts
+    qts = 2*nts
     
     
 
@@ -88,7 +94,7 @@ def seed_initial(xx,lx,zz):
 
 def planar_initial(lz,zz,z0):
     
-    #z0 = lz*0.01                   # initial location of interface in W0   
+    z0 = lz*0.0                   # initial location of interface in W0   
     psi0 = z0 - zz
     
     return psi0
@@ -97,13 +103,13 @@ def planar_initial(lz,zz,z0):
 
 def sum_sine_initial(lx,nx,xx,zz,z0): 
     
-    k_max = int(np.floor(nx/12))    # max wavenumber, 12 grid points to resolve the highest wavemode
+    k_max = int(np.floor(nx/nx))    # max wavenumber, 12 grid points to resolve the highest wavemode
     
    
     np.random.seed(0)
     amp = 2.
     A = (np.random.rand(k_max)-0.5) * amp  # amplitude, draw from [-1,1] * eta
-    # A[0]=2.
+    A[0]= 2
 
     x_c = np.random.rand(k_max)*lx*0;                  # shift, draw from [0,Lx]    
     # z0 = lz*0.01;                               # level of z-axis
