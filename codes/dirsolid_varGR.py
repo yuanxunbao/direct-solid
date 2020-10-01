@@ -631,14 +631,14 @@ elif ictype == 3:
 elif ictype == 4:
     
     dd = sio.loadmat('transient1d.mat')
-    psi0 = np.repeat( dd['psi_1d'], nx, axis=0)
+    psi0 = np.repeat( (dd['psi_1d'])[0:nz], nx, axis=0)
     phi0 = np.tanh(psi0/sqrt2)
-    U0 = np.repeat( dd['U_1d'], nx, axis=0)
+    U0 = np.repeat( (dd['U_1d'])[0:nz], nx, axis=0)
    # Ti = dd['Ttip'][0]
    # cl0 = ( 933.3 - Ti )/m_slope
    # U0 = ( (2*c0/cl0)/(1-phi0+k+k*phi0 )  -1)/(1-k)
    # U_0 = U0[1,-1]
-    zz = np.repeat( dd['z_1d'], nx, axis=0)/W0
+    zz = np.repeat( (dd['z_1d'])[0:nz], nx, axis=0)/W0
    #  z_1d = dd['z_1d'][0]
    # zz,xx = np.meshgrid(z_1d, x)
     
