@@ -8,7 +8,7 @@ set(0,'defaultlinelinewidth',2)
 load dirsolid_varGR_traj1_noise0.00_misori0_lx18.10_nx133_asp40_ictype1_U0-1.00seed822.mat
 load dirsolid_varGR_traj1_noise0.00_misori0_lx18.10_nx133_asp40_ictype1_U0-1.00seed822_QoIs.mat
 sz = size(order_param);
-t_trans= 0.1;
+t_trans= 0.0;
 t_list = linspace(0,Tend,sz(2))-t_trans;
 idx = [5:4:21]; % frames to plot
 idx = [1:4:21]
@@ -48,7 +48,7 @@ figure(3)
 trun_st = 1200;
 trun_end = nz;%trun_st + trun_len -1;
 
-psi_last = reshape(order_param(:,end), [nx,nz]);
+psi_last = reshape(psi(:,end), [nx,nz]);
 c_last = reshape(conc(:,end), [nx,nz]);
 U_last = reshape(Uc(:,end), [nx,nz]);
 ztip = ztip_qoi(end);
