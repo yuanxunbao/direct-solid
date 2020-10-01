@@ -112,7 +112,7 @@ print('==========================================\n')
 ALLOCATE SPACE FOR OUTPUT ARRAYS
 -------------------------------------------------------------------------------------------------
 '''
-order_param = np.zeros((nv,nts+1), dtype=np.float64)
+op_phi = np.zeros((nv,nts+1), dtype=np.float64)
 op_psi = np.zeros((nv,nts+1), dtype=np.float64) 
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 Uc = np.zeros((nv,nts+1), dtype=np.float64)
@@ -528,14 +528,15 @@ def save_data(phi,U,z):
 
 def save_data_transient(psi,phi,U,z):
 
-    # cinf_cl0 =  1+ (1-k)*U_0
-    # c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
+    cinf_cl0 =  1+ (1-k)*U_0
+    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
 
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
 
     return np.reshape(psi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(U[1:-1,1:-1],     (nv,1), order='F') , \
+           np.reshape(c_tilde[1:-1,1:-1],     (nv,1), order='F') , \
            z[1:-1].T 
 
 if ictype == 0: 
@@ -611,7 +612,7 @@ psi_cpu = psi.astype(np.float64)
 # save initial data
 # order_param[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
 
-order_param[:,[0]], op_psi[:,[0]], Uc[:,[0]], zz_mv[:,0] = save_data_transient(psi_cpu, phi_cpu, U_cpu, z_cpu)
+op_phi[:,[0]], op_psi[:,[0]], Uc[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data_transient(psi_cpu, phi_cpu, U_cpu, z_cpu)
 
 
 
@@ -761,7 +762,7 @@ for kt in range(int(Mt/2)):
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        # order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk], Uc[:,[kk]] = save_data(phi,U,z_cpu)
        
-       order_param[:,[kk]], op_phi[:,[kk]], Uc[:,[kk]], zz_mv[:,kk] = save_data(psi, phi, U, z_cpu)
+       op_phi[:,[kk]], op_phi[:,[kk]], Uc[:,[kk]],conc[:,[kk]], zz_mv[:,kk] = save_data_transient(psi, phi, U, z_cpu)
        t_snapshot[kk] = 2*(kt+1)*dt 
 
 
@@ -772,7 +773,7 @@ print('elapsed time: ', (end-start))
 # save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
 
-save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'op_psi':op_psi, 'Uc':Uc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'op_psi':op_psi,'conc':conc, 'Uc':Uc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
