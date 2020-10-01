@@ -115,7 +115,8 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 order_param = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
-
+Uc = np.zeros((nv,nts+1), dtype=np.float64)
+Psi = np.zeros((nz,nts+1), dtype=np.float64)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -513,7 +514,7 @@ def rhs_U(U, U_new, ph, dpsi):
 
 
 
-def save_data(phi,U,z):
+def save_data(psi,phi,U,z):
     
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
@@ -522,7 +523,9 @@ def save_data(phi,U,z):
    
     return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1], (nv,1), order='F') , \
-           z[1:-1,].T 
+           z[1:-1,].T , \
+           np.reshape(psi[1:-1,1:-1],     (nv,1), order='F') , \
+           np.reshape(U[1:-1,1:-1],     (nv,1), order='F') 
             
 
 
@@ -600,8 +603,7 @@ psi_cpu = psi.astype(np.float64)
 
 
 # save initial data
-order_param[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
-
+order_param[:,[0]], conc[:,[0]], zz_mv[:,0], Psi[:,[0]], Uc[:,[0]] = save_data(psi_cpu, phi_cpu, U_cpu, z_cpu )
 
 # allocate space on device
 psi_old = cuda.to_device(psi_cpu)
@@ -747,13 +749,13 @@ for kt in range(int(Mt/2)):
        z_cpu = z_gpu.copy_to_host()
        # print(zz_cpu.shape)
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
-       order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)
+       order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk], Psi[:,[kk]], Uc[:,[kk]] = save_data(psi_cpu, phi_cpu, U_cpu, z_cpu )
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
 
-save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'psi':Psi, 'Uc':Uc, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
 
 save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
