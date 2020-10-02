@@ -533,8 +533,8 @@ def save_data_transient(psi,phi,U,z):
 
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
 
-    return np.reshape(psi[1:-1,1:-1],     (nv,1), order='F') , \
-           np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
+    return np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
+           np.reshape(psi[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(U[1:-1,1:-1],     (nv,1), order='F') , \
            np.reshape(c_tilde[1:-1,1:-1],     (nv,1), order='F') , \
            z[1:-1].T 
@@ -762,7 +762,7 @@ for kt in range(int(Mt/2)):
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        # order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk], Uc[:,[kk]] = save_data(phi,U,z_cpu)
        
-       op_phi[:,[kk]], op_phi[:,[kk]], Uc[:,[kk]],conc[:,[kk]], zz_mv[:,kk] = save_data_transient(psi, phi, U, z_cpu)
+       op_phi[:,[kk]], op_psi[:,[kk]], Uc[:,[kk]],conc[:,[kk]], zz_mv[:,kk] = save_data_transient(psi, phi, U, z_cpu)
        t_snapshot[kk] = 2*(kt+1)*dt 
 
 
