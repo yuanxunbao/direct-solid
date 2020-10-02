@@ -164,7 +164,7 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     cells = identify_peak(mui)
     pri_spac = primary_spacing(mui, lxd, dxd)
     #print(lxd,pri_spac)
-    if mph == 'cell':
+    if mph == 'cell' or len(cells)==0:
         return pri_spac, 0.0
     
     else:
