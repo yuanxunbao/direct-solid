@@ -26,9 +26,9 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-
-delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para()
-
+if len(sys.argv)==3:
+    delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para(sys.argv[2])
+else: delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para()
 
 print(t_macro.shape)
 
@@ -630,18 +630,23 @@ elif ictype == 3:
 
 elif ictype == 4:
     
-    dd = sio.loadmat('transient1d.mat')
-    psi0 = np.repeat( (dd['psi_1d'])[0:nz], nx, axis=0)
+  if len(sys.argv)==3:
+    dd = sio.loadmat(sys.argv[2],squeeze_me = True)
+    
+    tr_tip = dd['trans_tip']
+    tr_tip = tr_tip - 150
+    psi0 = np.repeat( (dd['op_psi_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
     phi0 = np.tanh(psi0/sqrt2)
-    U0 = np.repeat( (dd['U_1d'])[0:nz], nx, axis=0)
+    U0 = np.repeat( (dd['Uc_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+    zz = np.repeat( (dd['z_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
    # Ti = dd['Ttip'][0]
    # cl0 = ( 933.3 - Ti )/m_slope
    # U0 = ( (2*c0/cl0)/(1-phi0+k+k*phi0 )  -1)/(1-k)
    # U_0 = U0[1,-1]
-    zz = np.repeat( (dd['z_1d'])[0:nz], nx, axis=0)/W0
+   # zz = np.repeat( (dd['z_1d'])[:,0:nz], nx, axis=0)/W0
    #  z_1d = dd['z_1d'][0]
    # zz,xx = np.meshgrid(z_1d, x)
-    
+  else: print('need macro data input!!!')  
     
     
 else: 

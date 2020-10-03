@@ -13,10 +13,10 @@ import math
 import scipy.io as sio
 
 
-def phys_para():    
+def phys_para(macrodata):    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
 
-    macroGR = sio.loadmat('macroGR_traj1.mat', squeeze_me=True)    
+    macroGR = sio.loadmat(macrodata, squeeze_me=True)    
 
     G = macroGR['G_t'][0]           # thermal gradient        K/um
     print('G', G) 
@@ -63,18 +63,18 @@ def simu_para(W0,Dl_tilde):
     dx = 1.2
     nx = np.floor(lx/dx)
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 100000                     	# total  number of time steps
+    Mt = 300000                     	# total  number of time steps
 
     eta = 0.0                		# magnitude of noise
 
     seed_val = np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
-    nts = 2				# number snapshots to save, Mt/nts must be int
+    nts = 5				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
     ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
 
-    direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    direc = '/scratch/07428/ygqin/data'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 2*nts
     
