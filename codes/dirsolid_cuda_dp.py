@@ -26,8 +26,9 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-
-delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
+if len(sys.argv) ==3:
+      delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para(sys.argv[2])
+else: delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
 seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
 
@@ -113,12 +114,15 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 -------------------------------------------------------------------------------------------------
 '''
 op_phi = np.zeros((nv,nts+1), dtype=np.float64)
-op_psi = np.zeros((nv,nts+1), dtype=np.float64) 
 conc = np.zeros((nv,nts+1), dtype=np.float64)
-Uc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
 t_snapshot = np.zeros(nts+1, dtype=np.float64)
 
+op_psi_1d = np.zeros((nz,nts+1), dtype=np.float64)
+op_phi_1d = np.zeros((nz,nts+1), dtype=np.float64)
+Uc_1d = np.zeros((nz,nts+1), dtype=np.float64)
+conc_1d = np.zeros((nz,nts+1), dtype=np.float64)
+z_1d = np.zeros((nz,nts+1), dtype=np.float64)
 '''
 -------------------------------------------------------------------------------------------------
 INIT. TIP POSITION
@@ -533,11 +537,7 @@ def save_data_transient(psi,phi,U,z):
 
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
 
-    return np.reshape(psi[1:-1,1:-1],     (nv,1), order='F') , \
-           np.reshape(phi[1:-1,1:-1],     (nv,1), order='F') , \
-           np.reshape(U[1:-1,1:-1],     (nv,1), order='F') , \
-           np.reshape(c_tilde[1:-1,1:-1],     (nv,1), order='F') , \
-           z[1:-1].T 
+    return psi[1,1:-1],phi[1,1:-1],U[1,1:-1],c_tilde[1,1:-1],z[1:-1] 
 
 if ictype == 0: 
 
@@ -610,9 +610,9 @@ psi_cpu = psi.astype(np.float64)
 
 
 # save initial data
-# order_param[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
+op_phi[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
 
-op_phi[:,[0]], op_psi[:,[0]], Uc[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data_transient(psi_cpu, phi_cpu, U_cpu, z_cpu)
+op_psi_1d[:,0], op_phi_1d[:,0], Uc_1d[:,0], conc_1d[:,0], z_1d[:,0] = save_data_transient(psi_cpu, phi_cpu, U_cpu, z_cpu)
 
 
 
@@ -760,20 +760,24 @@ for kt in range(int(Mt/2)):
        z_cpu = z_gpu.copy_to_host()
        # print(zz_cpu.shape)
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
-       # order_param[:,[kk]], conc[:,[kk]], zz_mv[:,kk], Uc[:,[kk]] = save_data(phi,U,z_cpu)
+       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)
        
-       op_phi[:,[kk]], op_phi[:,[kk]], Uc[:,[kk]],conc[:,[kk]], zz_mv[:,kk] = save_data_transient(psi, phi, U, z_cpu)
+       op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
        t_snapshot[kk] = 2*(kt+1)*dt 
 
 
 end = time.time()
 print('elapsed time: ', (end-start))
 
-
+if len(sys.argv)==3:
+     macrodata = sys.argv[2]
+     GRt_data = sio.loadmat(macrodata) 
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip})   # append
+     sio.savemat(macrodata, GRt_data)
 # save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
 
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'op_psi':op_psi,'conc':conc, 'Uc':Uc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 

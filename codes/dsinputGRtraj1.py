@@ -12,20 +12,20 @@ import numpy as np
 import math
 import scipy.io as sio
 
-def phys_para():    
+def phys_para(macrodata):    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
     # G = 0.35                        # thermal gradient        K/um
     # R = 500                          # pulling speed           um/s
     # macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
-    macroGR = sio.loadmat('macroGR_traj1.mat',squeeze_me=True)
+    macroGR = sio.loadmat(macrodata,squeeze_me=True)
     Gt = macroGR['G_t']
     Rt = macroGR['R_t']
     t_macro = macroGR['t_macro']
    
-    nend = 50 
-    Gt = Gt[0:nend]
-    Rt = Rt[0:nend]
-    t_macro = t_macro[0:nend]
+    #nend = 50 
+    #Gt = Gt[0:nend]
+    #Rt = Rt[0:nend]
+    #t_macro = t_macro[0:nend]
 
 
     delta = 0.01                    # strength of the surface tension anisotropy         
@@ -61,7 +61,7 @@ def phys_para():
     # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, 'traj1'
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[-9:-4]
   
 def simu_para(W0,Dl_tilde, tend):
     
@@ -86,9 +86,9 @@ def simu_para(W0,Dl_tilde, tend):
     nts = 20				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
     tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
-    ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    ictype = 4                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines, 4 for transient data
 
-    direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    direc = '/scratch/07428/ygqin/data/'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 20*nts
     
