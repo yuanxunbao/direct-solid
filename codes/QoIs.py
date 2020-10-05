@@ -159,8 +159,8 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     
    # mui, sigmai, var_phi = phi_xstat(phi,Ntip)
     if Ntip>100:
-        mui = np.mean(phi[Ntip-100:Ntip+10,:], axis=0)
-    else: mui = np.mean(phi[:Ntip+10,:], axis=0)
+        mui = np.mean(phi, axis=0)
+    else: mui = np.mean(phi, axis=0)
     cells = identify_peak(mui)
     pri_spac = primary_spacing(mui, lxd, dxd)
     #print(lxd,pri_spac)
@@ -170,12 +170,12 @@ def spacings(phi, Ntip, lxd, dxd, mph):
     else:
         
         # for secondary need to cut
-        if Ntip>600:        
-            phi_cp = phi[Ntip-600:Ntip-100,:]   # originally 150
-        elif Ntip>100:
-            phi_cp = phi[:Ntip-100,:]
-        else:  phi_cp = phi[:Ntip,:]
-            
+       # if Ntip>600:        
+       #     phi_cp = phi[Ntip-600:Ntip-100,:]   # originally 150
+       # elif Ntip>100:
+       #     phi_cp = phi[:Ntip-100,:]
+       # else:  phi_cp = phi[:Ntip,:]
+        phi_cp = phi[:-50,:]    
         sigmai = np.std(phi_cp, axis=0)          #(nx,)
         # further, need to do some filtering for sigmai to ensure sidebranching is big enough
         sec_spac_arr, sides = secondary_spacing(cells, sigmai, phi_cp, dxd)

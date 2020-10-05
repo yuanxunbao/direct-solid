@@ -33,7 +33,7 @@ else: delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_mac
 print(t_macro.shape)
 
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts, qoi_winds = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
 
 
 
@@ -712,7 +712,7 @@ print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_win = 100
+fs_win = qoi_winds
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
 HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
@@ -824,13 +824,15 @@ for kt in range(int(Mt/2)):
        # print(Tz_cur.shape)
         Ttip_arr[kqs] = Tz_cur[cur_tip]
         phi = phi_old.copy_to_host().T
-        inter_len[kqs] = interf_len(phi)
-        pri_spac[kqs], sec_spac[kqs] = spacings(phi, cur_tip, lxd, dxd, mph)
+        if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
+        else: phi_cp = phi
+        inter_len[kqs] = interf_len(phi_cp)
+        pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
         fsc=5
         if cur_tip>fs_win+fsc:
-                phi_cp = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
+                phi_fs = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
                 Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
-                fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
+                fs_arr[:,kqs] = solid_frac(phi_fs,  821, Tz_cp)
                 fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-1 )
                 fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
                 HCS[kqs], HCS_arr = Kou_HCS(fs_cur, G_cur*dxd)
@@ -839,7 +841,9 @@ for kt in range(int(Mt/2)):
         #fs_arr = np.vstack(( fs_arr, fs ))
         U  = U_old.copy_to_host().T
         cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
-        cqois[:,kqs] = conc_var(phi,cnc)
+        if cur_tip>qoi_winds: cnc_cp = cnc[cur_tip-qoi_winds:cur_tip,:]
+        else: cnc_cp = cnc
+        cqois[:,kqs] = conc_var(phi_cp,cnc_cp)
        # cqois = np.vstack(( cqois, c_var ))          
     
     
@@ -864,7 +868,7 @@ end = time.time()
 print('elapsed time: ', (end-start))
 
 
-save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0-ztip_qoi[0],'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
