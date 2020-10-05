@@ -61,7 +61,7 @@ def phys_para(macrodata):
     # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[-9:-4]
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[8:-4]
   
 def simu_para(W0,Dl_tilde, tend):
     
