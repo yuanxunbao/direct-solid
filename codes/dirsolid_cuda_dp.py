@@ -30,7 +30,7 @@ if len(sys.argv) ==3:
       delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para(sys.argv[2])
 else: delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde,tau0)
 
 # dimensionalize
 lxd = lx * W0
@@ -772,8 +772,16 @@ print('elapsed time: ', (end-start))
 
 if len(sys.argv)==3:
      macrodata = sys.argv[2]
-     GRt_data = sio.loadmat(macrodata) 
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip})   # append
+     GRt_data = sio.loadmat(macrodata)
+     ztipt = z_1d[cur_tip,-1]*W0
+     Ttipt = Ti + G*ztipt
+     cutid = cur_tip
+     while op_phi_1d[cutid,-1]<0.999: cutid -=1
+     op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
+     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:];
+     z_1d = z_1d[cutid:,:];        
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip,'Ttip':Ttipt,\
+'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0})   # append
      sio.savemat(macrodata, GRt_data)
 # save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )

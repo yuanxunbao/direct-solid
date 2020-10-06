@@ -633,8 +633,8 @@ elif ictype == 4:
   if len(sys.argv)==3:
     dd = sio.loadmat(sys.argv[2],squeeze_me = True)
     
-    tr_tip = dd['trans_tip']
-    tr_tip = tr_tip - 150
+    #tr_tip = dd['trans_tip']
+    tr_tip = 0
     psi0 = np.repeat( (dd['op_psi_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
     phi0 = np.tanh(psi0/sqrt2)
     U0 = np.repeat( (dd['Uc_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
