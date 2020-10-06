@@ -825,10 +825,10 @@ for kt in range(int(Mt/2)):
         Ttip_arr[kqs] = Tz_cur[cur_tip]
         phi = phi_old.copy_to_host().T
         if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
-        else: phi_cp = phi
+        else: phi_cp = phi[:cur_tip,:]
         inter_len[kqs] = interf_len(phi_cp)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
-        fsc=5
+        fsc=0
         if cur_tip>fs_win+fsc:
                 phi_fs = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
                 Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
@@ -842,7 +842,7 @@ for kt in range(int(Mt/2)):
         U  = U_old.copy_to_host().T
         cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
         if cur_tip>qoi_winds: cnc_cp = cnc[cur_tip-qoi_winds:cur_tip,:]
-        else: cnc_cp = cnc
+        else: cnc_cp = cnc[:cur_tip,:]
         cqois[:,kqs] = conc_var(phi_cp,cnc_cp)
        # cqois = np.vstack(( cqois, c_var ))          
     
