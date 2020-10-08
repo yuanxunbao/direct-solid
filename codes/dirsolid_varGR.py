@@ -826,7 +826,7 @@ for kt in range(int(Mt/2)):
         phi = phi_old.copy_to_host().T
         if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
         else: phi_cp = phi[:cur_tip,:]
-        inter_len[kqs] = interf_len(phi_cp)
+        inter_len[kqs] = interf_len(phi_cp,dx)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
         fsc=0
         if cur_tip>fs_win+fsc:
@@ -873,7 +873,7 @@ save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc
 
 
 
-save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
+save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\
 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
 'fs_arr':fs_arr,'HCS':HCS,'Kc_ave':Kc_ave})
 

@@ -104,12 +104,12 @@ def solute_variability(c, Nss, T, Te):
 ##==================== cellular/dendritic structure =========================##
 # the only input for this section is phi that has been vertically cropped      
 
-def interf_len(phi):
+def interf_len(phi,dx):
     
     mphi, nphi = phi.shape
     
     inter_len = np.sum( (1-phi**2) )
-    Lf = inter_len/(mphi*nphi)
+    Lf = inter_len/(mphi*nphi*dx)
     
     return Lf # one number
 
