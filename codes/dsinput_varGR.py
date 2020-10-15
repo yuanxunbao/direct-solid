@@ -10,11 +10,24 @@ Created on Fri May 29 11:10:53 2020
 
 import numpy as np
 import math
+import scipy.io as sio
 
-def phys_para():    
+def phys_para(macrodata):    
 # NOTE: for numbers entered here, if having units: length in micron, time in second, temperature in K.
-    G = 0.35                        # thermal gradient        K/um
-    R = 3000                          # pulling speed           um/s
+    # G = 0.35                        # thermal gradient        K/um
+    # R = 500                          # pulling speed           um/s
+    # macroGR = sio.loadmat('macroGR_analytical.mat',squeeze_me=True)
+    macroGR = sio.loadmat(macrodata,squeeze_me=True)
+    Gt = macroGR['G_t']
+    Rt = macroGR['R_t']
+    t_macro = macroGR['t_macro']
+   
+    #nend = 50 
+    #Gt = Gt[0:nend]
+    #Rt = Rt[0:nend]
+    #t_macro = t_macro[0:nend]
+
+
     delta = 0.01                    # strength of the surface tension anisotropy         
     k = 0.14                        # interface solute partition coefficient
     m = 2.6
@@ -22,9 +35,9 @@ def phys_para():
     c_infm = m * c_inf                  # shift in melting temperature     K
     Dl = 3000                       # liquid diffusion coefficient      um**2/s
     d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
-    W0 = 0.1132                   # interface thickness      um
+    W0 = 0.1132                    # interface thickness      um
     
-    lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
+    # lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
     tau0 = 0.6267*lamd*W0**2/Dl     # time scale               s
     
@@ -32,32 +45,39 @@ def phys_para():
    
     Te = 821
     Tm = 933.3
-    Ti = Tm- c_infm/k 
+    Tl = Tm - c_infm
+    Ts = Tm - c_infm/k
+    Ti = Ts
+ 
+    cl0 = (Tm - Ti)/m
+
     # U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
     
-    U_0 = -1.
+    U_0 = (c_inf/cl0 - 1)/(1-k)
     # non-dimensionalized parameters based on W0 and tau0
     
-    R_tilde = R*tau0/W0
+    # R_tilde = R*tau0/W0
     Dl_tilde = Dl*tau0/W0**2
-    lT_tilde = lT/W0
+    # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m, G, R, Ti, U_0
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[8:-4]
   
-def simu_para(W0,Dl_tilde):
+def simu_para(W0,Dl_tilde, tend):
     
     eps = 1e-8                      	# divide-by-zero treatment
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 5                  	# aspect ratio
+    asp_ratio = 4                  	# aspect ratio
 	       		                # number of grids in x   nx*aratio must be int
-    lx = 18.1*2/W0                         # horizontal length in units of W0
+    lx = 18.1*2.5/W0                         # horizontal length in units of W0
     dx = 0.8
     nx = np.floor(lx/dx)
-    dt = 0.4*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 800000                     	# total  number of time steps
+    
+    dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
+    Mt = 2*np.ceil( tend/2/dt ) # total  number of time steps (even number)
+    dt = tend/Mt
 
     eta = 0.04                		# magnitude of noise
 
@@ -65,17 +85,17 @@ def simu_para(W0,Dl_tilde):
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 20				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
-    tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
-    ictype = 1                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
+    tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
+    ictype = 4                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines, 4 for transient data
 
-    direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
+    direc = '/scratch/07428/ygqin/data/'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
-    qts = 4*nts
-    
-    
+    qts = 20*nts
+    qoi_winds = int(50/W0/dx) 
+    qoi_winds = qoi_winds if qoi_winds%2 == 0 else qoi_winds+1 
 
     return eps, alpha0, lx, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
-           ictype, qts
+           ictype, qts, qoi_winds
 
 def seed_initial(xx,lx,zz): 
     
