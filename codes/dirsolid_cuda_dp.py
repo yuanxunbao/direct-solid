@@ -41,7 +41,11 @@ filename = 'dirsolid'+ '_G'+str('%4.2F'%G) + '_R'+str('%4.2F'%R) + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)
 
-
+# calculate snapshot / qoi to save
+kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
+nts = int(Mt/kts); print(nts)
+interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
+qts = int(Mt/interq); print(qts)
 
 '''
 -------------------------------------------------------------------------------------------------
