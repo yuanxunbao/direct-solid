@@ -826,7 +826,7 @@ for kt in range(int(Mt/2)):
         phi = phi_old.copy_to_host().T
         if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
         else: phi_cp = phi[:cur_tip,:]
-        inter_len[kqs] = interf_len(phi_cp,dx)
+        inter_len[kqs] = interf_len(phi_cp,W0)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
         fsc=0
         if cur_tip>fs_win+fsc:

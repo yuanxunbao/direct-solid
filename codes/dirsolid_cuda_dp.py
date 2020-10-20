@@ -30,7 +30,7 @@ if len(sys.argv) ==3:
       delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para(sys.argv[2])
 else: delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts = PARA.simu_para(W0,Dl_tilde,tau0)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds = PARA.simu_para(W0,Dl_tilde,tau0)
 
 # dimensionalize
 lxd = lx * W0
@@ -654,9 +654,11 @@ kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
 
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_arr = []; ztip_arr = np.zeros(qts); 
+fs_win = qoi_winds
+fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
+HCS = np.zeros(qts);Kc_ave = np.zeros(qts)
 Ttip_arr = np.zeros(qts);
-tip_uq = np.zeros(qts); 
+tip_uq = np.zeros(qts);
 alpha_arr = np.zeros((nz,qts));
 start = time.time()
 
@@ -739,14 +741,34 @@ for kt in range(int(Mt/2)):
 
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
-        z_cpu = z_gpu.copy_to_host()
-        
         time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
-        ztip_qoi[kqs] = z_cpu[cur_tip]*W0  # in um      
-        Ttip_arr[kqs] = Ti + G*( z_cpu[cur_tip]- R_tilde*(2*kt+2)*dt )*W0
-        tip_uq[kqs] = 1. - (z_cpu[cur_tip]-R_tilde*(2*kt+2)*dt)/ lT_tilde        
-        #tip_vel[kqs] = (z_cpu[cur_tip] - zz_cpu[3,prev_tip])*W0 / (dt*tau0)  # in um/s
-
+        z_cpu = z_gpu.copy_to_host()
+        ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
+       # print('z-cpu',z_cpu)
+        Tz_cur = Ti + G*(z_cpu*W0 - R*time_qoi[kqs])
+       # print(Tz_cur.shape)
+        Ttip_arr[kqs] = Tz_cur[cur_tip]
+        phi = phi_old.copy_to_host().T
+        if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
+        else: phi_cp = phi[:cur_tip,:]
+        inter_len[kqs] = interf_len(phi_cp,W0)
+        pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
+        fsc=0
+        if cur_tip>fs_win+fsc:
+                phi_fs = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
+                Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
+                fs_arr[:,kqs] = solid_frac(phi_fs,  821, Tz_cp)
+                fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-1 )
+                fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
+                HCS[kqs], HCS_arr = Kou_HCS(fs_cur, G*dxd)
+                Kc = permeability(fs_cur,pri_spac[kqs], mph)
+                Kc_ave[kqs] = np.mean(Kc)
+        #fs_arr = np.vstack(( fs_arr, fs ))
+        U  = U_old.copy_to_host().T
+        cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
+        if cur_tip>qoi_winds: cnc_cp = cnc[cur_tip-qoi_winds:cur_tip,:]
+        else: cnc_cp = cnc[:cur_tip,:]
+        cqois[:,kqs] = conc_var(phi_cp,cnc_cp)
     # print & save data 
     if (2*kt+2)%kts==0:
        
@@ -790,9 +812,9 @@ save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
-save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
-'Ttip_arr':Ttip_arr,'tip_uq':tip_uq})
-
+save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\
+'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
+'fs_arr':fs_arr,'HCS':HCS,'Kc_ave':Kc_ave})
 
 # save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi, 'tip_x':cur_tip_x, 'tip_z':cur_tip, 'zz_mv':zz_mv})
 

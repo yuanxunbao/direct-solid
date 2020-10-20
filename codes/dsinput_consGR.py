@@ -57,7 +57,7 @@ def simu_para(W0,Dl_tilde,tau0):
     dx = 0.8
     nx = np.floor(lx/dx)
     dt = 0.4*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 800000                     	# total  number of time steps
+    Mt = 80000                     	# total  number of time steps
 
     eta = 0.04                		# magnitude of noise
 
@@ -72,10 +72,11 @@ def simu_para(W0,Dl_tilde,tau0):
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 4*nts
     
-    
+    qoi_winds = int(50/W0/dx)
+    qoi_winds = qoi_winds if qoi_winds%2 == 0 else qoi_winds+1        
 
     return eps, alpha0, lx, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
-           ictype, qts
+           ictype, qts, qoi_winds
 
 def seed_initial(xx,lx,zz): 
     
