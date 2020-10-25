@@ -77,11 +77,12 @@ def simu_para(W0,Dl_tilde,tau0):
     direc = '/scratch/07428/ygqin/data'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 2*nts
-    
+    qoi_winds = int(50/W0/dx)
+    qoi_winds = qoi_winds if qoi_winds%2 == 0 else qoi_winds+1    
     
 
     return eps, alpha0, lx, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
-           ictype, qts
+           ictype, qts, qoi_winds
 
 def seed_initial(xx,lx,zz): 
     
