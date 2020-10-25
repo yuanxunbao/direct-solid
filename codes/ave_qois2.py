@@ -102,7 +102,7 @@ saveflg = True
 
 #dt = 0.001   #time_qoi[1]-time_qoi[0]
 
-reducid = [70,70,70,70,70]
+reducid = [70,70,70,70]
 
  #here time trye
 
@@ -177,15 +177,15 @@ for i in range(num_traj):
     qoi_arr, qoi_std, time_redu = reduc(qoi_arr, qoi_std, time_true[i], reducid[i])
     
     ax3.errorbar(time_redu,qoi_arr[2,:],yerr=qoi_std[2,:],c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
-arr_lena = mpimg.imread('ps.png')
-imagebox = OffsetImage(arr_lena, zoom=0.1)
-ab = AnnotationBbox(imagebox, (-0.4, 5.1))
-ax3.add_artist(ab)
+#arr_lena = mpimg.imread('ps.png')
+#imagebox = OffsetImage(arr_lena, zoom=0.1)
+#ab = AnnotationBbox(imagebox, (-0.4, 5.1))
+#ax3.add_artist(ab)
 #arr_lena = mpimg.imread('ps2.png')
 #i#magebox = OffsetImage(arr_lena, zoom=0.25)
 #ab = AnnotationBbox(imagebox, (-0.6-0.12, 8.5))
 #ax3.add_artist(ab)
-plt.draw()
+#plt.draw()
 plt.ylim(1,18)
 plt.xlabel('distance from the center (mm)', fontsize = 15);plt.ylabel('primary spacing (um)')
 plt.legend([legends[0],legends[1],legends[2],legends[3]],fontsize=9)
@@ -199,11 +199,11 @@ for i in range(num_traj):
     
     ax3.errorbar(time_redu,qoi_arr[3,:],yerr=qoi_std[3,:],c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
 plt.ylim(0,5)
-arr_lena = mpimg.imread('ss.png')
-imagebox = OffsetImage(arr_lena, zoom=0.12)
-ab = AnnotationBbox(imagebox, (-0.4, 1.7))
-ax3.add_artist(ab)
-plt.draw()
+#arr_lena = mpimg.imread('ss.png')
+#imagebox = OffsetImage(arr_lena, zoom=0.12)
+#ab = AnnotationBbox(imagebox, (-0.4, 1.7))
+#ax3.add_artist(ab)
+#plt.draw()
 plt.xlabel('distance from the center (mm)', fontsize = 15);plt.ylabel('secondary spacing (um)')
 plt.legend([legends[0],legends[1],legends[2],legends[3]],fontsize=9)
 plt.title('secondary spacing (um)')
@@ -217,11 +217,7 @@ for i in range(num_traj):
     qoi_arr = loadmat(str(i)+ 'traj' +'QoIs.mat')['qoi_arr']
     qoi_std = loadmat(str(i)+ 'traj' +'QoIs.mat')['qoi_std']  
     qoi_arr, qoi_std, time_redu = reduc(qoi_arr, qoi_std, time_true[i], reducid[i])  
-    if i ==0 :ax1.errorbar(time_redu,qoi_arr[4,:]*0.4/16.1,yerr=qoi_std[4,:]*0.4/16.1,c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
-    if i ==1 :ax1.errorbar(time_redu,qoi_arr[4,:]*0.8/16.1,yerr=qoi_std[4,:]*0.8/16.1,c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
-    if i ==2 :ax1.errorbar(time_redu,qoi_arr[4,:]*1.2/16.1,yerr=qoi_std[4,:]*1.2/16.1,c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
-    if i ==3 :ax1.errorbar(time_redu,qoi_arr[4,:]*0.8/11.3,yerr=qoi_std[4,:]*0.8/11.3,c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
-    #if i ==4 :ax1.errorbar(time_redu,qoi_arr[4,:]*0.4/16.1,yerr=qoi_std[4,:]*0.4/16.1,c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
+   
     #ax1.errorbar(time_redu,qoi_arr[4,:],yerr=qoi_std[4,:],c=colors[i] ,elinewidth=ebwidth,ecolor = ebcolors[i])
     
 plt.xlabel('distance from the center (mm)', fontsize = 15);plt.ylabel('interfacial length')
