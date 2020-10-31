@@ -1028,7 +1028,7 @@ setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, px, py, nprocx, nprocy, ha_wd)
 # march two steps per loop
 gpu_com=0
 start = time.time()
-for kt in range(10):#int(Mt/2)):
+for kt in range(100):#int(Mt/2)):
    
     # =================================================================
     # time step: t = (2*nt) * dt
@@ -1113,8 +1113,9 @@ for kt in range(10):#int(Mt/2)):
 if rank==0 or rank==1:
   phi = phi_new.copy_to_host();  U = U_old.copy_to_host();
 # if ha_wd ==1: print('rank',rank,phi)#[ha_wd:-ha_wd,ha_wd:-ha_wd])
-  if ha_wd ==1: print('rank',rank,U[1:-1,1:-1])
-  if ha_wd ==2: print('rank',rank,U[2:-2,2:-2])
+  #if ha_wd ==1: print('rank',rank,U[1:-1,1:-1])
+ # if ha_wd ==2: print('rank',rank,U[2:-2,2:-2])
+  print('rank',rank,U[ha_wd:-ha_wd,ha_wd:-ha_wd])
 end = time.time()
 print('elapsed time: ', (end-start))
 
