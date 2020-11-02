@@ -33,7 +33,7 @@ def phys_para():
     Dl_tilde = Dl*tau0/W0**2
     lT_tilde = lT/W0
 
-   return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R
+    return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R
 
 def simu_para(W0,Dl_tilde):
     
@@ -41,12 +41,12 @@ def simu_para(W0,Dl_tilde):
     alpha0 = 0                    	# misorientation angle in degree
     
     
-    asp_ratio = 10                  	# aspect ratio
-    nx = 128            		# number of grids in x   nx*aratio must be int
+    asp_ratio = 60                  	# aspect ratio
+    nx = 10            		# number of grids in x   nx*aratio must be int
     lxd = 1.5*W0*nx                     # horizontal length in micron
     dx = lxd/nx/W0
     dt = 0.8*(dx)**2/(4*Dl_tilde)       # time step size for forward euler
-    Mt = 10000                      	# total  number of time steps
+    Mt = 120000                      	# total  number of time steps
 
     eta = 0.0                		# magnitude of noise
 
@@ -56,14 +56,14 @@ def simu_para(W0,Dl_tilde):
     mv_flag = False			# moving frame flag
     tip_thres = np.int32(math.ceil(0.7*nx*asp_ratio))
     ictype = 1                   	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines
-
+    filename = 'try.mat'
     direc = './'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_cpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     
     
     
 
-    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, direc, mv_flag, tip_thres, \
+    return eps, alpha0, lxd, asp_ratio, nx, dt, Mt, eta, seed_val, U0, nts, filename,direc, mv_flag, tip_thres, \
            ictype
 
 def seed_initial(xx,lx,zz): 
@@ -77,7 +77,7 @@ def seed_initial(xx,lx,zz):
 
 def planar_initial(lz,zz):
     
-    z0 = lz*0.01                   # initial location of interface in units of W0   
+    z0 = lz*0.4                   # initial location of interface in units of W0   
     psi0 = z0 - zz
     
     return psi0
