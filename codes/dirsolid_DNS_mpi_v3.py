@@ -18,6 +18,7 @@ from numpy.random import random
 import time
 import math
 from QoIs import *
+from scipy.interpolate import griddata
 
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
@@ -909,6 +910,13 @@ elif ictype == 4:
     zz += dd['z_1d'][0]
    # Ti = dd['Ttip'][0]
   else: print('need macro data input!!!')
+
+
+elif ictpye == 5: # radial initial condition
+
+     # load U 1d data and construct radial for U and psi 
+     intp_data = 
+ 
  
 else: 
     print('ERROR: invalid type of initial condtion...' )
@@ -1041,6 +1049,12 @@ for kt in range(int(Mt/2)):
     t_cur = (2*kt)*dt*tau0
     XYT_lin_interp[bpg2d, tpb2d](x_gpu, z_gpu, t_cur, X_gpu, Z_gpu, mac_t_gpu, T_3D_gpu, T_m, alpha_3D_gpu, alpha_m )
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states, T_m, alpha_m)
+    if ha_wd==1:
+      BC_421[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,phi_old, BCsend)
+      comm.Barrier()
+      BC_comm(BCsend, BCrecv, nx ,nz)
+      comm.Barrier()
+      BC_124[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,phi_old, BCrecv)
     setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, phi_old, px, py, nprocx, nprocy, ha_wd)
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
     # =================================================================
@@ -1058,33 +1072,33 @@ for kt in range(int(Mt/2)):
       BC_124[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, phi_new, BCrecv)
     setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, phi_new, px, py, nprocx, nprocy, ha_wd)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
-    if (2*kt+2)%kts==0:
-       
-       print('time step = ', 2*(kt+1) )
-       if mvf == True: print('tip position nz = ', cur_tip)
-
-
-       kk = int(np.floor((2*kt+2)/kts))
-       phi = phi_old.copy_to_host()
-       U  = U_old.copy_to_host()
-       psi = psi_old.copy_to_host()
-       z_cpu = z_gpu.copy_to_host()
-       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
-       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)       
+#    if (2*kt+2)%kts==0:
+#       
+#       print('time step = ', 2*(kt+1) )
+#       if mvf == True: print('tip position nz = ', cur_tip)
+#
+#
+#       kk = int(np.floor((2*kt+2)/kts))
+#       phi = phi_old.copy_to_host()
+#       U  = U_old.copy_to_host()
+#       psi = psi_old.copy_to_host()
+#       z_cpu = z_gpu.copy_to_host()
+#       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
+#       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)       
       # op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
 
-       t_snapshot[kk] = 2*(kt+1)*dt 
-if rank==0 or rank==1:
-  phi = phi_new.copy_to_host();  U = U_old.copy_to_host();
+#       t_snapshot[kk] = 2*(kt+1)*dt 
+#if rank==0 or rank==1:
+#  phi = phi_new.copy_to_host();  U = U_old.copy_to_host();
 # if ha_wd ==1: print('rank',rank,phi)#[ha_wd:-ha_wd,ha_wd:-ha_wd])
   #if ha_wd ==1: print('rank',rank,U[1:-1,1:-1])
  # if ha_wd ==2: print('rank',rank,U[2:-2,2:-2])
-  print('rank',rank,U[ha_wd:-ha_wd,ha_wd:-ha_wd])
+#  print('rank',rank,U[ha_wd:-ha_wd,ha_wd:-ha_wd])
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
+#save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
+# 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 '''
 save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\

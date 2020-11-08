@@ -27,13 +27,13 @@ LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
 if len(sys.argv)==3:
-    delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para(sys.argv[2])
-else: delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name  = PARA.phys_para()
+    delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name, len_l2eu, z_max  = PARA.phys_para(sys.argv[2])
+else: delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name, len_l2eu, z_max  = PARA.phys_para()
 
 print(t_macro.shape)
 
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts, qoi_winds = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts, qoi_winds = PARA.simu_para(W0,Dl_tilde, t_macro[-1]/tau0, len_l2eu)
 
 
 
@@ -44,7 +44,7 @@ interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
 qts = int(Mt/interq); print(qts)
 
 
-
+R0_tilde = Rt[0]*tau0/W0
 
 # dimensionalize
 lxd = lx * W0
@@ -442,6 +442,7 @@ def moveframe(ps, ph, U, zz, ps_buff, ph_buff, U_buff, zz_buff):
         ps_buff[i,j] = 2*ps[i,n-2] - ps[i,n-3] # extrapalation
         ph_buff[i,j] = 2*ph[i,n-2] - ph[i,n-3]
         U_buff[i,j]  = U_0
+        
         # zz_buff[j] = 2*zz[n-2] - zz[n-3]
 
 @cuda.jit
@@ -639,6 +640,8 @@ elif ictype == 4:
     phi0 = np.tanh(psi0/sqrt2)
     U0 = np.repeat( (dd['Uc_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
     zz = np.repeat( (dd['z_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+    #print('U0',dd['Uc_1d'])
+    z_tr0 = dd['ztip']/W0
    # Ti = dd['Ttip'][0]
    # cl0 = ( 933.3 - Ti )/m_slope
    # U0 = ( (2*c0/cl0)/(1-phi0+k+k*phi0 )  -1)/(1-k)
@@ -648,6 +651,20 @@ elif ictype == 4:
    # zz,xx = np.meshgrid(z_1d, x)
   else: print('need macro data input!!!')  
     
+elif ictype == 5:
+
+    z0 = lz*0.0
+    psi0 = PARA.planar_initial(lz,zz,z0)
+    phi0 = np.tanh(psi0/sqrt2)
+
+    c_liq = c_inf + c_inf*(1.0-k)/k*np.exp(-R0_tilde/Dl_tilde *(zz - z0 ))# * (zz >= z0)
+    print('decay',-R0_tilde,Dl_tilde,zz[-1,-1])
+    c_sol = c_inf
+    print('c_0', c_liq[1,:]/c_inf)
+    U0 = ( 2*k*(c_liq/c_inf)/( 1+k+ (1-k)*1) -1 )/(1-k)
+    print('U_0', U0[1,:])
+   # U0 = 0 * (phi0 >= 0.0 ) + \
+   #      (k*c_liq/c_inf-1)/(1-k) * (phi0 < 0.0)
     
 else: 
     print('ERROR: invalid type of initial condtion...' )
@@ -725,7 +742,7 @@ ztip_qoi = np.zeros(qts)
 time_qoi = np.zeros(qts)
 tip_vel = np.zeros(qts)
 
-
+z_threshold = z_max+z_tr0
 # march two steps per loop
 for kt in range(int(Mt/2)):
    
@@ -761,7 +778,8 @@ for kt in range(int(Mt/2)):
     # =================================================================
     # If moving frame flag is set to TRUE
     # =================================================================
-    if mvf == True :
+    #print(z_gpu[-2], 'compared to', z_max, z_tr0)
+    if mvf == True and z_gpu[-2]<z_threshold:
         # update tip position    
        cur_tip_x, cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)    
  

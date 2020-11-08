@@ -26,7 +26,9 @@ PARA = importlib.import_module(sys.argv[1])
 LOAD PARAMETERS
 -------------------------------------------------------------------------------------------------
 '''
-if len(sys.argv) ==3:
+if len(sys.argv) ==4:
+      delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para(sys.argv[2],int(sys.argv[3]))
+elif len(sys.argv) ==3:
       delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para(sys.argv[2])
 else: delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
@@ -708,7 +710,7 @@ for kt in range(int(Mt/2)):
            
            # prev_tip = prev_tip-1
            cur_tip = cur_tip-1
-
+    cur_tip_x, cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)
     '''    
     #save QoIs
     if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
@@ -778,7 +780,7 @@ for kt in range(int(Mt/2)):
        
        print('time step = ', 2*(kt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
-
+       print('tip position nz = ', cur_tip)
 
        kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
@@ -809,6 +811,20 @@ if len(sys.argv)==3:
      GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip,'Ttip':Ttipt,\
 'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0})   # append
      sio.savemat(macrodata, GRt_data)
+if len(sys.argv)==4:
+     macrodata = sys.argv[2]
+     GRt_data = sio.loadmat(macrodata)
+     ztipt = z_1d[cur_tip,-1]*W0
+     Ttipt = Ti + G*ztipt
+     #cutid = 0
+     cutid = cur_tip
+     while op_phi_1d[cutid,-1]<0.999: cutid -=1
+     op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
+     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:];
+     z_1d = z_1d[cutid:,:];
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip,'Ttip':Ttipt,\
+'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0,'ztip_arr':ztip_qoi,'time_qoi':time_qoi})   # append
+     sio.savemat('TID'+sys.argv[3]+macrodata, GRt_data)
 # save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
 
