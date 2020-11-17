@@ -30,22 +30,22 @@ LOAD PARAMETERS
 '''
 delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0, cl_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds = PARA.simu_para(W0,Dl_tilde,tau0)
+seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2])
 
 # dimensionalize
 lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'DNS'+ '_G'+str('%4.2F'%G) + '_R'+str('%4.2F'%R) + '_noise'+ \
+filename = 'DNSn'+ (sys.argv[2])[:-4] + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0) 
 
 # calculate snapshot / qoi to save
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
-nts = int(Mt/kts); print(nts)
+nts = int(Mt/kts); #print(nts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-qts = int(Mt/interq); print(qts)
+qts = int(Mt/interq);# print(qts)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -303,10 +303,10 @@ len_blockz = lz/nprocy
 
 new_ratio = int32(len_blockz/len_blockx)
 print('aspect ratio',new_ratio, 'for rank',rank)
-lminx = px*len_blockx
-lminz = py*len_blockz
+lminx = px*len_blockx + xmin_mic
+lminz = py*len_blockz + zmin_mic
 
-dx = 1.2
+#dx = 1.2
 nx = int32(len_blockx/dx)
 nz = int32(new_ratio*nx)
 
@@ -386,6 +386,8 @@ op_phi = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
 t_snapshot = np.zeros(nts+1, dtype=np.float64)
+#Temp = np.zeros((nv,nts+1), dtype=np.float64)
+
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -510,8 +512,9 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, nt, rng_states, T_m, alp
     
     # thread on interior points
     if 0 < i < m-1 and 0 < j < n-1:
-
-        alpha = alpha_m[i,j]
+        if 1-ph[i,j]**2>0.01: alpha = alpha_m[i,j]
+        else: alpha = 0
+       # alpha = alpha_m[i,j]
         cosa = math.cos(alpha) 
         sina = math.sin(alpha)
 
@@ -840,15 +843,17 @@ def save_data(phi,U,z):
            np.reshape(c_tilde[ha_wd:-ha_wd,ha_wd:-ha_wd], (nv,1), order='F') , \
            z[ha_wd:-ha_wd,].T
 
-def save_data_transient(psi,phi,U,z):
+def save_data2(phi,U,temp,z):
 
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
 
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
 
- 
-    return psi[1,1:-1],phi[1,1:-1],U[1,1:-1],c_tilde[1,1:-1],z[1:-1] 
+    return np.reshape(phi[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
+           np.reshape(c_tilde[ha_wd:-ha_wd,ha_wd:-ha_wd], (nv,1), order='F') , \
+           np.reshape(temp[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
+           z[ha_wd:-ha_wd,].T
 
 if ictype == 0: 
 
@@ -910,20 +915,20 @@ elif ictype == 4:
   else: print('need macro data input!!!')
 
 
-elif ictpye == 5: # radial initial condition
+elif ictype == 5: # radial initial condition
 
      # load U 1d data and construct radial for U and psi 
 #     intp_data =
-   if len(sys.argv)==4:
-     dd = sio.loadmat(sys.argv[2],squeeze_me = True) 
+#   if len(sys.argv)==4:
+     dd = sio.loadmat(sys.argv[2]) 
      points = dd['points']
      psi_value = dd['psi_value']
      U_value = dd['U_value']
-     psi0_mic =  griddata(points, psi_value, (xx,zz), method='linear')[:,:,0]
+     psi0 =  griddata(points, psi_value, (xx*W0,zz*W0), method='linear')[:,:,0]/W0
 
-     phi0 = np.tanh(psi0_mic/sqrt2)
+     phi0 = np.tanh(psi0/sqrt2)
 
-     U0 =  griddata(points, U_value, (xx,zz), method='linear')[:,:,0] 
+     U0 =  griddata(points, U_value, (xx*W0,zz*W0), method='linear')[:,:,0] 
  
 else: 
     print('ERROR: invalid type of initial condtion...' )
@@ -981,9 +986,9 @@ x_gpu  = cuda.to_device(x_cpu)      # add x array here !!!!!!!!!!!!!!!!!!!!!!!!!
 #z_gpu_inte  = cuda.to_device(z_cpu[ha_wd:-ha_wd])
 
 mac_data = sio.loadmat(sys.argv[2],squeeze_me = True)
-X_gpu = cuda.to_device(mac_data['x_grid']/W0)
-Z_gpu = cuda.to_device(mac_data['y_grid']/W0)
-mac_t_gpu = cuda.to_device(mac_data['time_traj'])
+X_gpu = cuda.to_device(mac_data['x_grid']/W0)     # X_gpu , xx should be non-dimensional
+Z_gpu = cuda.to_device(mac_data['y_grid']/W0)     # Z_gpu, zz, z_cpu should all be non-dimensional
+mac_t_gpu = cuda.to_device(mac_data['t_macro'])   # time here should have dimension second
 T_3D_gpu = cuda.to_device(mac_data['T_arr'])
 
 #if px ==0:coe_a = -2*0.1
@@ -991,7 +996,7 @@ T_3D_gpu = cuda.to_device(mac_data['T_arr'])
 #elif px ==2:coe_a = 0.1
 #elif px ==3: coe_a = 2*0.1
 #else: print('not enough processor in x direction')
-alpha_3D_cpu = mac_data['alpha_arr'][:,:,0]
+alpha_3D_cpu = -mac_data['n_alpha']
 
 alpha_3D_gpu = cuda.to_device(alpha_3D_cpu)
 
@@ -1049,7 +1054,6 @@ setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, phi_new,px, py, nprocx, nprocy, 
 # march two steps per loop
 start = time.time()
 for kt in range(int(Mt/2)):
-   
     # =================================================================
     # time step: t = (2*nt) * dt
     # =================================================================
@@ -1088,14 +1092,16 @@ for kt in range(int(Mt/2)):
        kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       psi = psi_old.copy_to_host()
+     #  temp = T_m.copy_to_host()
        z_cpu = z_gpu.copy_to_host()
-       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
-       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)       
+       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 )
+       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U, z_cpu) 
+     #  op_phi[:,[kk]], conc[:,[kk]], Temp[:,[kk]], zz_mv[:,kk] = save_data2(phi,U, temp, z_cpu)       
       # op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
 
        t_snapshot[kk] = 2*(kt+1)*dt 
-
+Temp = T_m.copy_to_host()
+a_field = alpha_m.copy_to_host()
 #if rank==0 or rank==1:
 #  phi = phi_new.copy_to_host();  U = U_old.copy_to_host();
 # if ha_wd ==1: print('rank',rank,phi)#[ha_wd:-ha_wd,ha_wd:-ha_wd])
@@ -1105,8 +1111,8 @@ for kt in range(int(Mt/2)):
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
+save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
+ 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0, 'temp':Temp[ha_wd:-ha_wd,ha_wd:-ha_wd], 'a_field':a_field[ha_wd:-ha_wd,ha_wd:-ha_wd]} )
 
 '''
 save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\
