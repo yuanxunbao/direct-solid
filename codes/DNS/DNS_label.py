@@ -35,9 +35,12 @@ seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx
 # dimensionalize
 lxd = lx * W0
 
+### liquid to solid transition ####
+l2s = -0.995
+
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'DNSalpha'+ (sys.argv[2])[:-4] + '_noise'+ \
+filename = 'DNSalpha_comm'+ (sys.argv[2])[:-4] + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val) 
 
@@ -388,6 +391,7 @@ ALLOCATE SPACE FOR OUTPUT ARRAYS
 '''
 op_phi = np.zeros((nv,nts+1), dtype=np.float64)
 conc = np.zeros((nv,nts+1), dtype=np.float64)
+theta0 = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
 t_snapshot = np.zeros(nts+1, dtype=np.float64)
 #Temp = np.zeros((nv,nts+1), dtype=np.float64)
@@ -836,16 +840,17 @@ def XYT_lin_interp(x, y, t, X, Y, T,  u_3d,u_m,v_2d,v_m ):
 
     return
 
-def save_data(psi,U,z):
+def save_data(psi,U,misor,z):
     
     phi=np.tanh(psi)
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
-    
+    misor = (misor*180/pi)%90    
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
    
     return np.reshape(psi[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
            np.reshape(c_tilde[ha_wd:-ha_wd,ha_wd:-ha_wd], (nv,1), order='F') , \
+           np.reshape(misor[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
            z[ha_wd:-ha_wd,].T
 
 def save_data2(phi,U,temp,z):
@@ -938,7 +943,18 @@ elif ictype == 5: # radial initial condition
      phi0 = np.tanh(psi0/sqrt2)
 
      U0 =  griddata(points, U_value, (xx*W0,zz*W0), method='linear')[:,:,0] 
- 
+
+     n_theta = 300
+     np.random.seed(seed_val)
+     theta_arr = np.random.rand(n_theta)*pi/2
+   #  print(theta_arr)
+     theta = np.arctan(zz/xx)
+     where_are_NaNs = np.isnan(theta)
+     theta[where_are_NaNs] = 0
+     i_theta = (np.absolute(theta/(pi/2/n_theta))).astype(int)
+
+     alpha0=theta_arr[i_theta-1]*(phi0>l2s) 
+
 else: 
     print('ERROR: invalid type of initial condtion...' )
     sys.exit(1)
@@ -948,6 +964,7 @@ else:
 psi = set_halo(psi0)
 phi = set_halo(phi0)
 U = set_halo(U0)
+alpha_cpu = set_halo(alpha0)
 zz = set_halo(zz)
 #print(z_1d)
 x_cpu = np.zeros(nx+2*ha_wd); x_cpu[ha_wd:-ha_wd] = x_1d
@@ -958,15 +975,15 @@ z_cpu = np.zeros(nz+2*ha_wd); z_cpu[ha_wd:-ha_wd] = z_1d
 setBC_cpu(psi, 1, 1)
 setBC_cpu(U, 1, 1)
 setBC_cpu(phi,1,1)
-
+setBC_cpu(alpha_cpu, 1 ,1)
 
 phi_cpu = phi.astype(np.float64)
 U_cpu = U.astype(np.float64)
 psi_cpu = psi.astype(np.float64)
-
+alpha_cpu = alpha_cpu.astype(np.float64)
 
 # save initial data
-op_phi[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
+op_phi[:,[0]], conc[:,[0]], theta0[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, alpha_cpu, z_cpu )
 
 
 
@@ -1109,10 +1126,11 @@ for kt in range(int(Mt/2)):
        kk = int(np.floor((2*kt+2)/kts))
        phi = psi_old.copy_to_host()
        U  = U_old.copy_to_host()
+       misor = alpha_m.copy_to_host()
      #  temp = T_m.copy_to_host()
        z_cpu = z_gpu.copy_to_host()
        # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 )
-       op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U, z_cpu) 
+       op_phi[:,[kk]], conc[:,[kk]], theta0[:,[kk]], zz_mv[:,kk] = save_data(phi,U, misor, z_cpu) 
      #  op_phi[:,[kk]], conc[:,[kk]], Temp[:,[kk]], zz_mv[:,kk] = save_data2(phi,U, temp, z_cpu)       
       # op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
 
@@ -1140,7 +1158,7 @@ print('rank',rank,'psi',pnew)
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
+save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'phi':phi,'U':U,'dpsi':dpsi, 't_snapshot':t_snapshot*tau0,\
  'temp':Temp, 'a_field':a_field, 'send':send,'recv':recv,'pnew':pnew,'Unew':Unew} )
 
