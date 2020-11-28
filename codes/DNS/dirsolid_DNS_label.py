@@ -978,6 +978,17 @@ elif ictype == 5: # radial initial condition
      phi0 = np.tanh(psi0/sqrt2)
 
      U0 =  griddata(points, U_value, (xx*W0,zz*W0), method='linear')[:,:,0] 
+
+     n_theta = 300
+     np.random.seed(seed_val)
+     theta_arr = np.random.rand(n_theta)*pi/2
+     print(theta_arr)
+     theta = np.arctan(zz/xx)
+     where_are_NaNs = np.isnan(theta)
+     theta[where_are_NaNs] = 0
+     i_theta = (np.absolute(theta/(pi/2/n_theta))).astype(int)
+   
+     alpha0=theta_arr[i_theta-1]*(phi0>l2s)
  
 else: 
     print('ERROR: invalid type of initial condtion...' )
@@ -986,7 +997,7 @@ else:
 mac_data = sio.loadmat(sys.argv[2],squeeze_me = True)
 X_gpu = cuda.to_device(mac_data['x_grid']/W0)
 Z_gpu = cuda.to_device(mac_data['y_grid']/W0)
-mac_t_gpu = cuda.to_device(mac_data['time_traj'])
+mac_t_gpu = cuda.to_device(mac_data['t_macro'])
 T_3D_gpu = cuda.to_device(mac_data['T_arr'])
 #alpha0 = -mac_data['n_alpha']
 # append halo around data
