@@ -18,7 +18,7 @@ from numpy.random import random
 import time
 import math
 from QoIs import *
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, interp2d
 
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
@@ -40,7 +40,7 @@ l2s = -0.995
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'DNSalpha_comm'+ (sys.argv[2])[:-4] + '_noise'+ \
+filename = 'DNSalpha_comm_nbrs'+ (sys.argv[2])[:-4] + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val) 
 
@@ -647,24 +647,30 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, nt, rng_states, T_m, alp
 
         # a new section here to change the misorientation angle for boundary points
         if ph_new[i,j] > l2s and ph[i,j] < l2s: # flip the misorientation angle from 0 to angle of the nearest solid grid
-          if -1e-15 < alpha < 1e-15:# print('the angle of liquid should be set to zero initially!!!')
-             #neighbor_radius = 1;
-             #while -1e-15 < alpha < 1e-15:
+          if -1e-15 < alpha < 1e-15:
              alphan = alpha; flip = False
-             if   ph[i-1,j]>l2s: alphan=alpha_m[i-1,j]; flip=True
-             elif ph[i+1,j]>l2s: alphan=alpha_m[i+1,j]; flip=True
-             elif ph[i,j-1]>l2s: alphan=alpha_m[i,j-1]; flip=True
-             elif ph[i,j+1]>l2s: alphan=alpha_m[i,j+1]; flip=True
-             else:
-               if ph[i-1,j-1]>l2s: alphan=alpha_m[i-1,j-1]; flip=True
-               if ph[i+1,j-1]>l2s: alphan=alpha_m[i+1,j-1]; flip=True
-               if ph[i-1,j+1]>l2s: alphan=alpha_m[i-1,j+1]; flip=True
-               if ph[i+1,j+1]>l2s: alphan=alpha_m[i+1,j+1]; flip=True
-              # alpha = label
-               #neighbor_radius += 1
-             if flip == False and ha_wd-1<i<m-ha_wd and ha_wd-1<j<n-ha_wd:
+             n1 = 0; n2 = 0; n3 = 0;
+             alpha1 = 0; alpha2 = 0; alpha3 = 0;
+             num_nbr = 9; len_nbr = 3;
+             ## count the numbers for every angle:
+             for iid in range(num_nbr):
+                 xi = iid%len_nbr; yi = int(iid/len_nbr)
+                 if ph[i+xi-1,j+yi-1] > l2s: 
+                       temp = alpha_m[i+xi-1,j+yi-1]
+                       if   alpha1==0: n1 +=1; alpha1 = temp;
+                       elif -1e-15 < temp-alpha1 < 1e-15: n1 +=1
+                       elif alpha2==0: n2 +=1; alpha2 = temp;
+                       elif -1e-15 < temp-alpha2 < 1e-15: n2 +=1
+                       elif alpha3==0: n3 +=1; alpha3 = temp;
+                       elif -1e-15 < temp-alpha3 < 1e-15: n3 +=1 
+                       else: print("case not closed!!!!")
+             ### find the maximum number of occurence:
+             if n1>=n2 and n1 >=n3: alpha_m[i,j] = alpha1
+             elif n2>=n3: alpha_m[i,j] = alpha2
+             else: alpha_m[i,j] = alpha3    
+             if n1==0 and n2==0 and n3==0 and ha_wd-1<i<m-ha_wd and ha_wd-1<j<n-ha_wd:
                      print('psi',ps[i,j],ps_new[i,j],'i',i,'j',j,'cannot find the solid points in the 8 neighbors')
-             else: alpha_m[i,j] = alphan
+            # else: alpha_m[i,j] = alphan
          # else:
          #    if rank==0:
          #       print('alpha',alpha,'i',i,'j',j,'the angle of liquid should be set to zero initially!!!')
@@ -865,12 +871,15 @@ def XYT_lin_interp(x, y, t, X, Y, T,  u_3d,u_m,v_2d,v_m ):
 
     return
 
+
+
+
 def save_data(psi,U,misor,z):
     
     phi=np.tanh(psi)
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
-    misor = (misor*180/pi)%90    
+    misor = ((misor*180/pi)+90)*(phi>l2s)    
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
    
     return np.reshape(psi[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
@@ -969,16 +978,33 @@ elif ictype == 5: # radial initial condition
 
      U0 =  griddata(points, U_value, (xx*W0,zz*W0), method='linear')[:,:,0] 
 
-     n_theta = 300
-     np.random.seed(seed_val)
-     theta_arr = np.random.rand(n_theta)*pi/2
+     n_theta = 120
+   #  np.random.seed(seed_val)
+  #   theta_arr = np.random.rand(n_theta)*pi/2
    #  print(theta_arr)
-     theta = np.arctan(zz/xx)
+  #   theta = np.arctan(zz/xx)
+  #   where_are_NaNs = np.isnan(theta)
+  #   theta[where_are_NaNs] = 0
+  #   i_theta = (np.absolute(theta/(pi/2/n_theta))).astype(int)
+
+   #  alpha0=theta_arr[i_theta-1]*(phi0>l2s) 
+
+     theta_arr = np.linspace(-pi/2,0,n_theta) 
+     mac_data = sio.loadmat(sys.argv[2],squeeze_me = True)
+     alpha_macro = -mac_data['n_alpha']
+     X_cpu = mac_data['x_grid']/W0                # X_gpu , xx should be non-dimensional
+     Z_cpu = mac_data['y_grid']/W0                # Z_gpu, zz, z_cpu should all be non-dimensional
+     ainterp = interp2d(X_cpu, Z_cpu, alpha_macro.T,kind='cubic')
+     theta = ainterp(x_1d ,z_1d)
+     theta = theta.T 
      where_are_NaNs = np.isnan(theta)
      theta[where_are_NaNs] = 0
-     i_theta = (np.absolute(theta/(pi/2/n_theta))).astype(int)
+     i_theta = (np.absolute( (pi/2+theta) /(pi/2/n_theta))).astype(int)
 
-     alpha0=theta_arr[i_theta-1]*(phi0>l2s) 
+     alpha0=theta_arr[i_theta-1]*(phi0>l2s)
+     #print('i_theta', i_theta)
+     #print('alpha0', alpha0)
+     
 
 else: 
     print('ERROR: invalid type of initial condtion...' )
@@ -1006,7 +1032,7 @@ phi_cpu = phi.astype(np.float64)
 U_cpu = U.astype(np.float64)
 psi_cpu = psi.astype(np.float64)
 alpha_cpu = alpha_cpu.astype(np.float64)
-
+print('the initial misorientations for liquid are all zeros', ( -1e-15< np.all( alpha_cpu*(phi<l2s)) <1e-15 ) )
 # save initial data
 op_phi[:,[0]], conc[:,[0]], theta0[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, alpha_cpu, z_cpu )
 

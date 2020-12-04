@@ -876,7 +876,7 @@ def save_data(psi,U,misor,z):
     phi=np.tanh(psi)
     cinf_cl0 =  1+ (1-k)*U_0
     c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / cinf_cl0
-    misor = (misor*180/pi)%90    
+    misor = (misor*180/pi)#%90    
 #    c_tilde = ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 )
    
     return np.reshape(psi[ha_wd:-ha_wd,ha_wd:-ha_wd],     (nv,1), order='F') , \
