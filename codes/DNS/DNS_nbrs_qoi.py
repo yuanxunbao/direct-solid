@@ -37,7 +37,6 @@ lxd = lx * W0
 
 ### liquid to solid transition ####
 l2s = -0.995
-nwx = 401; nwz = 801; xB = -100/W0; zB = -850/W0; Mqs = int(Mt*8/20); Mqe = int(Mt*10/20) 
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
@@ -48,8 +47,8 @@ str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx
 # calculate snapshot / qoi to save
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 nts = int(Mt/kts); #print(nts)
-interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
-qts = int(Mt/interq);# print(qts)
+interq = int( 2*np.floor(Mt/qts/2) );  print('the interval of qoi',interq)
+qts = int(Mt/interq); #print('the ',qts)
 
 '''
 -------------------------------------------------------------------------------------------------
@@ -422,14 +421,14 @@ def sum_cur_tip(d_sum_arr, d_tip, d_phi):
 
 
 def compute_tip_pos(cur_tip,sum_arr, phi):
-
+    nx,nz=phi.shape
     while True :
 
         sum_arr[0] = 0.
         sum_cur_tip[bpg,tpb](sum_arr,  cur_tip, phi)
         mean_along_z = sum_arr[0] / nx
 
-        if (mean_along_z > -0.99):
+        if (mean_along_z > -0.99) and cur_tip < nz-1:
             cur_tip += 1
         else: 
             tip_x = np.argmax(phi[:,cur_tip])
@@ -873,45 +872,74 @@ def XYT_lin_interp(x, y, t, X, Y, T,  u_3d,u_m,v_2d,v_m ):
     return
 
 @cuda.jit
-def rotate_select(phiw, Uw, phib, Ub, alphaB, nx0, nz0 ):
+def rotate( Bid, len_box, nx0, nz0, alpha_arr, phiw, Uw, phib, Ub ):
     # this function gonna call every time step (in a region), define a space map
-    # rotate the base to make the dendrites vertical (the base point B).
-    # then select a window of specified size nwx, nwz around the base point
-    cosB = math.cos(alphaB); sinB = math.sin(alphaB)
+    # rotate the base to make the dendrites vertical (the base point B keeps at the same location).
+    # then select a window of specified size nwx (odd number), nwz(odd number) around the base point
+       cent = int((len_box-1)/2)
+       alphaB = alpha_arr[Bid] 
+       cosB = math.cos(alphaB); sinB = math.sin(alphaB)
 
-    i,j = cuda.grid(2)
+       i,j = cuda.grid(2)
 
-    nwx, nwz = phiw.shape
+       nwx, nwz = phiw.shape
 
-    if  i < nwx and j < nwz :
+       if  i < nwx and j < nwz :   ## 0 <= i,j <=len_box-1, the middle int((len_box-1)/2)
  
-        xij = cosB*i - sinB*j
-        zij = sinB*i + cosB*j
+         xij = cosB*(i-cent) - sinB*(j-cent)
+         zij = sinB*(i-cent) + cosB*(j-cent)
 
-        kx = nx0 + int(xij)
-        delta_x = xij - int(xij)
-        kz = nz0 + int(zij)
-        delta_z = zij - int(zij)
+         kx = nx0 + int(xij)
+         delta_x = xij - int(xij)
+         kz = nz0 + int(zij)
+         delta_z = zij - int(zij)
 
-        phiw[i,j] =  (1-delta_x)*(1-delta_z)*phib[kx,kz] + (1-delta_x)*delta_z*phib[kx,kz+1] \
+         phiw[i,j] =  (1-delta_x)*(1-delta_z)*phib[kx,kz] + (1-delta_x)*delta_z*phib[kx,kz+1] \
                         +delta_x*(1-delta_z)*phib[kx+1,kz] +   delta_x*delta_z*phib[kx+1,kz+1]
  
-        Uw[i,j] =  (1-delta_x)*(1-delta_z)*Ub[kx,kz] + (1-delta_x)*delta_z*Ub[kx,kz+1] \
+         Uw[i,j] =  (1-delta_x)*(1-delta_z)*Ub[kx,kz] + (1-delta_x)*delta_z*Ub[kx,kz+1] \
                       +delta_x*(1-delta_z)*Ub[kx+1,kz] +   delta_x*delta_z*Ub[kx+1,kz+1]
-    return
+    
+       return
 
 # need to define a flag to close the QoI calculations. 
 # before that flag turn to a false, keep the tracker open
-def box_generator(x, y, X, Y, num_box_1d, Len, center, orientation):
+def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro):
+    # CPU function call initially
     # leave margin in every GPU
- 
-    # in every GPU,  
+    # dimensions x,y (nx+2*ha_wd, nz+2*ha_wd); 
     # define a tracker based on the location of base points (B), phi[B] > QoI_thre, start the rotation and calculate tip position
     # if the tip position out of the rotated box, turn the flag to false, and pass to cpu.
     # define another tracker phi[B] < vel_thre, between 2 trackers, record tip position every time step for tip velocity    
+    
+    xB = []; zB = [];       
 
+    # 1. downsampling the macrodata to select the points B. 
+    x_margin = 0.75*Len*dx; z_margin = 0.75*Len*dz
+    xmin = x_1d[0] + x_margin;  xmax = x_1d[-1] - x_margin 
+    zmin = z_1d[0] + z_margin;  zmax = z_1d[-1] - z_margin
 
-    return
+    
+   # x_in=(X>xmin)*1*(X<xmax); z_in=(Z>zmin)*1*(Z<zmax);
+    xBid = [i for i, x in enumerate( (X>xmin)*1*(X<xmax) ) if x]; down_samx = int( len(xBid)/num_boxx ) 
+    zBid = [i for i, x in enumerate( (Z>zmin)*1*(Z<zmax) ) if x]; down_samz = int( len(zBid)/num_boxz )
+    xBid = xBid[::down_samx]; zBid = zBid[::down_samz]
+
+    XX, ZZ = np.meshgrid(X,Z,indexing='ij')
+    R = np.sqrt( (XX)**2 + (ZZ-center)**2)
+    phi_macro = np.tanh((R-r0)/sqrt2)
+    for i in xBid: 
+     for j in zBid:
+       if phi_macro[i,j] < l2s: 
+          xB.append(XX[i,j]); zB.append(ZZ[i,j]); 
+    
+    num_box = len(xB); alphaB=np.zeros(num_box)
+    xBid = np.zeros(num_box, dtype=int); zBid = np.zeros(num_box, dtype=int);
+    for i in range(num_box):
+          xBid[i] = np.argmin(np.absolute(x_1d-xB[i]));
+          zBid[i] = np.argmin(np.absolute(z_1d-zB[i]));
+          alphaB[i] = alpha_micro[xBid[i],zBid[i]]
+    return num_box, xBid, zBid, alphaB 
 
 
 def save_data(psi,U,misor,z):
@@ -1034,8 +1062,12 @@ elif ictype == 5: # radial initial condition
      alpha0=theta_arr[i_theta-1]*(phi0>l2s)
      #print('i_theta', i_theta)
      #print('alpha0', alpha0)
-     
-
+     #generate QoI boxes:
+     len_box = qoi_winds; 
+     num_box, xB, zB, alphaB = box_generator(x_1d, z_1d, 8, 8, len_box, X_cpu, Z_cpu, theta)  
+     print('length of box (grid points)',len_box,'number of box',num_box)
+#     print('rank',rank,'the center of QoI boxes', num_box, xB, zB, alphaB)
+ 
 else: 
     print('ERROR: invalid type of initial condtion...' )
     sys.exit(1)
@@ -1098,11 +1130,6 @@ Z_gpu = cuda.to_device(mac_data['y_grid']/W0)     # Z_gpu, zz, z_cpu should all 
 mac_t_gpu = cuda.to_device(mac_data['t_macro'])   # time here should have dimension second
 T_3D_gpu = cuda.to_device(mac_data['T_arr'])
 
-#if px ==0:coe_a = -2*0.1
-#elif px ==1:coe_a = -0.1
-#elif px ==2:coe_a = 0.1
-#elif px ==3: coe_a = 2*0.1
-#else: print('not enough processor in x direction')
 alpha_3D_cpu =-mac_data['n_alpha']
 #alpha_3D_cpu = np.zeros_like(phi_cpu) +15/180*pi
 alpha_3D_gpu = cuda.to_device(alpha_3D_cpu)
@@ -1127,21 +1154,27 @@ print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 # must be even
-kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
-interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
+# set the arrays for QoIs
 
-inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_win = qoi_winds
-fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
-HCS = np.zeros(qts);Kc_ave = np.zeros(qts)
-Ttip_arr = np.zeros(qts);
-tip_uq = np.zeros(qts);
-alpha_arr = np.zeros((nz,qts));
+inter_len = np.zeros(num_box); pri_spac = np.zeros(num_box); sec_spac = np.zeros(num_box);
+fs_arr = np.zeros((len_box,num_box)); cqois = np.zeros((10,num_box));
+HCS = np.zeros(num_box);Kc_ave = np.zeros(num_box)
+Ttip_arr = np.zeros(num_box);
+ztip_qoi = np.zeros(num_box)
+time_qoi = np.zeros(num_box)
+tip_vel = np.zeros(num_box)
 
-# array holds tip z-coord
-ztip_qoi = np.zeros(qts)
-time_qoi = np.zeros(qts)
-tip_vel = np.zeros(qts)
+#### allocate the memory on GPU for QoIs calculation
+phiw = cuda.device_array([len_box,len_box],dtype=np.float64) 
+Uw   = cuda.device_array([len_box,len_box],dtype=np.float64) 
+xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
+alphaB_gpu = cuda.to_device(alphaB); 
+cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32) 
+tip_tracker_gpu = cuda.device_array([num_box,100],dtype=np.int32) 
+tip_count = cuda.device_array(num_box,dtype=np.int32)
+tipB = cuda.device_array(num_box,dtype=np.int32)
+print_flag = True; end_qoi_flag = False
+
 
 # allocate boundary data
 BCsend = cuda.device_array([2*nx+2*nz,5*ha_wd],dtype=np.float64);
@@ -1198,24 +1231,53 @@ for kt in range(int(Mt/2)):
       BC_124[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, alpha_m, BCrecv)
     setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, alpha_m, px, py, nprocx, nprocy, ha_wd)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
+
+    ## QoI section: the windows are fixed at the beginning, the choice we have is when to calculate QoIs.
+    ## time_st_qoi: necessary, start the rotate--cal_tip, criterion: phiB > -0.999
+    ## time_vel: necessary, end the list for tip position, criterion: cur_tip > center + 5
+    ## time_end_qoi: this is not determined yet, for now criterion: cur_tip> max-5 need to transfer phi, U to cpu 
+    if (2*kt+2)%interq == 0 and phi_old[ha_wd,ha_wd] > l2s and end_qoi_flag == False :
+       for Bid in range(num_box):
+         nx0 = xB_gpu[Bid] + ha_wd; nz0 = zB_gpu[Bid] + ha_wd;
+         if cp_cpu_flag[Bid] ==0:  ## assume dendrites grow in z direction, start the tip tracker
+            if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
+              #print('rank',rank,'box id', Bid)
+              rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, phi_old, U_old )
+               
+             # print('the tip poisition stored right now',tipB[Bid]) 
+              cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw) 
+              tipB[Bid] = cur_tip  
+              if tip_count[Bid] < 100:
+                 #print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)      
+                 tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1
+              if cur_tip>len_box-5: 
+                 print('the box no.', Bid, 'in rank',rank,' turn off and transfer data to cpu, current tip', cur_tip )
+                 phi_cp = phiw.copy_to_host().T
+                 ## and the relavent QoI calculations
+                 cp_cpu_flag[Bid] =1
+                 inter_len[Bid] = interf_len(phi_cp,W0)
+                 pri_spac[Bid], sec_spac[Bid] = spacings(phi_cp, cur_tip, (len_box-1)*dx*W0, dxd, mph)
+
+
+    if sum(cp_cpu_flag)==num_box and print_flag==True: 
+           end_qoi_flag = True; print_flag = False; print('rank',rank,'ends QoI section!!!!!!!')
+
     if (2*kt+2)%kts==0:
 #       
        print('time step = ', 2*(kt+1) )
-       if mvf == True: print('tip position nz = ', cur_tip)
-#
-#
+    #   if mvf == True: print('tip position nz = ', cur_tip)
        kk = int(np.floor((2*kt+2)/kts))
        phi = psi_old.copy_to_host()
        U  = U_old.copy_to_host()
        misor = alpha_m.copy_to_host()
      #  temp = T_m.copy_to_host()
        z_cpu = z_gpu.copy_to_host()
-       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 )
        op_phi[:,[kk]], conc[:,[kk]], theta0[:,[kk]], zz_mv[:,kk] = save_data(phi,U, misor, z_cpu) 
-     #  op_phi[:,[kk]], conc[:,[kk]], Temp[:,[kk]], zz_mv[:,kk] = save_data2(phi,U, temp, z_cpu)       
-      # op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
 
-       t_snapshot[kk] = 2*(kt+1)*dt 
+       t_snapshot[kk] = 2*(kt+1)*dt
+
+tip_boxes = tip_tracker_gpu.copy_to_host()
+''' 
 Temp = T_m.copy_to_host()
 a_field = alpha_m.copy_to_host()
 phi=psi_old.copy_to_host()
@@ -1226,6 +1288,7 @@ send = BCsend.copy_to_host()
 recv = BCrecv.copy_to_host()
 pnew = psi_new.copy_to_host()
 print('rank',rank,'psi',pnew)
+'''
 #if rank==1:
 #      print('rank',rank,'psi',pnew,'Bcrecv',recv)
 #if rank==0:
@@ -1239,10 +1302,13 @@ print('rank',rank,'psi',pnew)
 end = time.time()
 print('elapsed time: ', (end-start))
 
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'phi':phi,'U':U,'dpsi':dpsi, 't_snapshot':t_snapshot*tau0,\
- 'temp':Temp, 'a_field':a_field, 'send':send,'recv':recv,'pnew':pnew,'Unew':Unew} )
-
+if num_box!=0: 
+  save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
+  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB],'zB':z_1d[zB],'alphaB':alphaB,\
+  'phi_win':phi_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac} )
+else:
+  save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
+  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0} )
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0, 'temp':Temp[ha_wd:-ha_wd,ha_wd:-ha_wd], 'a_field':a_field[ha_wd:-ha_wd,ha_wd:-ha_wd]} )
 
 '''
