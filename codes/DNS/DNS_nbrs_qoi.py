@@ -428,7 +428,7 @@ def compute_tip_pos(cur_tip,sum_arr, phi):
         sum_cur_tip[bpg,tpb](sum_arr,  cur_tip, phi)
         mean_along_z = sum_arr[0] / nx
 
-        if (mean_along_z > -0.99) and cur_tip < nz-1:
+        if (mean_along_z > l2s) and cur_tip < nz-1:
             cur_tip += 1
         else: 
             tip_x = np.argmax(phi[:,cur_tip])
@@ -872,7 +872,7 @@ def XYT_lin_interp(x, y, t, X, Y, T,  u_3d,u_m,v_2d,v_m ):
     return
 
 @cuda.jit
-def rotate( Bid, len_box, nx0, nz0, alpha_arr, phiw, Uw, phib, Ub ):
+def rotate( Bid, len_box, nx0, nz0, alpha_arr, phiw, Uw, Tw, phib, Ub, Tb ):
     # this function gonna call every time step (in a region), define a space map
     # rotate the base to make the dendrites vertical (the base point B keeps at the same location).
     # then select a window of specified size nwx (odd number), nwz(odd number) around the base point
@@ -899,7 +899,9 @@ def rotate( Bid, len_box, nx0, nz0, alpha_arr, phiw, Uw, phib, Ub ):
  
          Uw[i,j] =  (1-delta_x)*(1-delta_z)*Ub[kx,kz] + (1-delta_x)*delta_z*Ub[kx,kz+1] \
                       +delta_x*(1-delta_z)*Ub[kx+1,kz] +   delta_x*delta_z*Ub[kx+1,kz+1]
-    
+         Tw[i,j] = (1-delta_x)*(1-delta_z)*Tb[kx,kz] + (1-delta_x)*delta_z*Tb[kx,kz+1] \
+                      +delta_x*(1-delta_z)*Tb[kx+1,kz] +   delta_x*delta_z*Tb[kx+1,kz+1]
+ 
        return
 
 # need to define a flag to close the QoI calculations. 
@@ -1063,8 +1065,16 @@ elif ictype == 5: # radial initial condition
      #print('i_theta', i_theta)
      #print('alpha0', alpha0)
      #generate QoI boxes:
-     len_box = qoi_winds; 
-     num_box, xB, zB, alphaB = box_generator(x_1d, z_1d, 8, 8, len_box, X_cpu, Z_cpu, theta)  
+     len_box = qoi_winds;
+     cent = int((len_box-1)/2)
+     box_per_gpu = 3
+     R_max = 6000
+     delta_box = len_box*(dx*W0)
+     Mt_box= delta_box/R_max/(tau0*dt)
+     interq = int(Mt_box/10)
+     interq = interq if interq%2==0 else interq-1
+     if rank==0: print('length',delta_box,'the shortest time step to pass the box', Mt_box, 'time interval', interq)  
+     num_box, xB, zB, alphaB = box_generator(x_1d, z_1d, box_per_gpu, box_per_gpu, len_box, X_cpu, Z_cpu, theta)  
      print('length of box (grid points)',len_box,'number of box',num_box)
 #     print('rank',rank,'the center of QoI boxes', num_box, xB, zB, alphaB)
  
@@ -1166,11 +1176,14 @@ tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
 phiw = cuda.device_array([len_box,len_box],dtype=np.float64) 
-Uw   = cuda.device_array([len_box,len_box],dtype=np.float64) 
+Uw   = cuda.device_array([len_box,len_box],dtype=np.float64)
+Tw   = cuda.device_array([len_box,len_box],dtype=np.float64) 
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
-cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32) 
-tip_tracker_gpu = cuda.device_array([num_box,100],dtype=np.int32) 
+cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
+if num_box<100: num_frame = 3*len_box 
+else: num_frame = len_box
+tip_tracker_gpu = cuda.device_array([num_box,num_frame],dtype=np.int32) 
 tip_count = cuda.device_array(num_box,dtype=np.int32)
 tipB = cuda.device_array(num_box,dtype=np.int32)
 print_flag = True; end_qoi_flag = False
@@ -1240,24 +1253,37 @@ for kt in range(int(Mt/2)):
        for Bid in range(num_box):
          nx0 = xB_gpu[Bid] + ha_wd; nz0 = zB_gpu[Bid] + ha_wd;
          if cp_cpu_flag[Bid] ==0:  ## assume dendrites grow in z direction, start the tip tracker
-            if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
-              #print('rank',rank,'box id', Bid)
-              rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, phi_old, U_old )
+            #if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
+           if phi_old[nx0-cent,nz0-cent]>l2s:  
+             #print('rank',rank,'box id', Bid)
+              rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, Tw, phi_old, U_old, T_m )
                
              # print('the tip poisition stored right now',tipB[Bid]) 
               cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw) 
               tipB[Bid] = cur_tip  
-              if tip_count[Bid] < 100:
-                 #print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)      
-                 tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1
+              if tip_count[Bid] < num_frame:
+                 if tip_count[Bid]==1 and cur_tip==tip_tracker_gpu[Bid,0]: tip_count[Bid]=1       
+                 else: tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1; \
+                       print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
               if cur_tip>len_box-5: 
                  print('the box no.', Bid, 'in rank',rank,' turn off and transfer data to cpu, current tip', cur_tip )
                  phi_cp = phiw.copy_to_host().T
+                 U_cp  = Uw.copy_to_host().T
+                 T_cp = Tw.copy_to_host().T
+                 c_cp = ( 1+ (1-k)*U_cp )*( k*(1+phi_cp)/2 + (1-phi_cp)/2 ) / ( 1+ (1-k)*U_0 )
                  ## and the relavent QoI calculations
                  cp_cpu_flag[Bid] =1
                  inter_len[Bid] = interf_len(phi_cp,W0)
                  pri_spac[Bid], sec_spac[Bid] = spacings(phi_cp, cur_tip, (len_box-1)*dx*W0, dxd, mph)
-
+                 cqois[:,Bid] = conc_var(phi_cp,c_cp) 
+                 Tz_cp = np.mean(T_cp, axis=1)
+                 fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
+                 fs_cur = smooth_fs( fs_arr[:,Bid], len_box-2 )
+                 bool_arr= (fs_arr>1e-2)*(fs_arr<1)
+                 fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
+                 HCS[Bid], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
+                 Kc_ave[Bid] = np.mean( permeability(fs_cur,pri_spac[Bid], mph) )
+                 
 
     if sum(cp_cpu_flag)==num_box and print_flag==True: 
            end_qoi_flag = True; print_flag = False; print('rank',rank,'ends QoI section!!!!!!!')
@@ -1277,38 +1303,18 @@ for kt in range(int(Mt/2)):
        t_snapshot[kk] = 2*(kt+1)*dt
 
 tip_boxes = tip_tracker_gpu.copy_to_host()
-''' 
-Temp = T_m.copy_to_host()
-a_field = alpha_m.copy_to_host()
-phi=psi_old.copy_to_host()
-U = U_old.copy_to_host()
-dpsi = dPSI.copy_to_host()
-Unew = U_new.copy_to_host() 
-send = BCsend.copy_to_host()
-recv = BCrecv.copy_to_host()
-pnew = psi_new.copy_to_host()
-print('rank',rank,'psi',pnew)
-'''
-#if rank==1:
-#      print('rank',rank,'psi',pnew,'Bcrecv',recv)
-#if rank==0:
-#      print('rank',rank,'psi',pnew,'Bcsend',send[1856:,:])
-#if rank==0 or rank==1:
-#  phi = phi_new.copy_to_host();  U = U_old.copy_to_host();
-# if ha_wd ==1: print('rank',rank,phi)#[ha_wd:-ha_wd,ha_wd:-ha_wd])
-  #if ha_wd ==1: print('rank',rank,U[1:-1,1:-1])
- # if ha_wd ==2: print('rank',rank,U[2:-2,2:-2])
-#  print('rank',rank,U[ha_wd:-ha_wd,ha_wd:-ha_wd])
+
 end = time.time()
 print('elapsed time: ', (end-start))
 
 if num_box!=0: 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB],'zB':z_1d[zB],'alphaB':alphaB,\
-  'phi_win':phi_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac} )
+  'num_box':num_box,'phi_win':phi_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
+'Kc_ave':Kc_ave,'cqois':cqois} )
 else:
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
-  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0} )
+  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'num_box':num_box} )
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0, 'temp':Temp[ha_wd:-ha_wd,ha_wd:-ha_wd], 'a_field':a_field[ha_wd:-ha_wd,ha_wd:-ha_wd]} )
 
 '''

@@ -21,10 +21,7 @@ def phys_para(macrodata):
     Gt = macroGR['G_t']
     Rt = macroGR['R_t']
     t_macro = macroGR['t_macro']
-    z_max = macroGR['len_t'][-1]
-
-    Gmin = np.min(Gt)
-    Rmax = np.max(Rt) 
+   
     #nend = 50 
     #Gt = Gt[0:nend]
     #Rt = Rt[0:nend]
@@ -38,7 +35,7 @@ def phys_para(macrodata):
     c_infm = m * c_inf                  # shift in melting temperature     K
     Dl = 3000                       # liquid diffusion coefficient      um**2/s
     d0 = 5.0e-3                       # capillary length -- associated with GT coefficient   um
-    W0 = 0.1                    # interface thickness      um
+    W0 = 0.1132                    # interface thickness      um
     
     # lT = c_infm*( 1.0/k-1 )/G       # thermal length           um
     lamd = 5*np.sqrt(2)/8*W0/d0     # coupling constant
@@ -51,10 +48,7 @@ def phys_para(macrodata):
     Tl = Tm - c_infm
     Ts = Tm - c_infm/k
     Ti = Ts
-    
-    len_l2eu = (Tl-Te)/Gmin       # um
-    print('Gmin',Gmin,'the minimum domain length= ', len_l2eu, 'um' ) 
-
+ 
     cl0 = (Tm - Ti)/m
 
     # U_0 = ( c_infm/( Tm - Ti ) - 1 )/(1-k)
@@ -67,23 +61,17 @@ def phys_para(macrodata):
     # lT_tilde = lT/W0
 
 
-    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[8:-4], len_l2eu, z_max/W0
+    return delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m,  Ti, U_0, Gt, Rt, t_macro, macrodata[8:-4]
   
-def simu_para(W0,Dl_tilde, tend,len_l2eu):
+def simu_para(W0,Dl_tilde, tend):
     
     eps = 1e-8                      	# divide-by-zero treatment
     alpha0 = 0                    	# misorientation angle in degree
     
     
     asp_ratio = 4                  	# aspect ratio
-    
-    lxd = 45.25	       		                # number of grids in x   nx*aratio must be int
-
-    while lxd*asp_ratio < len_l2eu:
-          asp_ratio +=1
-
-    asp_ratio +=1
-    lx = lxd/W0                         # horizontal length in units of W0
+	       		                # number of grids in x   nx*aratio must be int
+    lx = 18.1*2.5/W0                         # horizontal length in units of W0
     dx = 0.8
     nx = np.floor(lx/dx)
     
@@ -97,14 +85,13 @@ def simu_para(W0,Dl_tilde, tend,len_l2eu):
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 20				# number snapshots to save, Mt/nts must be int
     mv_flag = True			# moving frame flag
-   # tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
-    tip_thres = np.int32(math.ceil(nx*(asp_ratio-1)))
+    tip_thres = np.int32(math.ceil(0.6*nx*asp_ratio))
     ictype = 4                 	# initial condtion: 0 for semi-circular, 1 for planar interface, 2 for sum of sines, 4 for transient data
 
     direc = '/scratch/07428/ygqin/data/'                	# direc = '/scratch/07429/yxbao/data'    # saving directory
     # filename = 'dirsolid_gpu_noise' + str('%4.2E'%eta)+'_misori'+str(alpha0)+'_lx'+ str(lxd)+'_nx'+str(nx)+'_asp'+str(asp_ratio)+'_seed'+str(seed_val)+'.mat'
     qts = 20*nts
-    qoi_winds = int(len_l2eu/W0/dx) 
+    qoi_winds = int(50/W0/dx) 
     qoi_winds = qoi_winds if qoi_winds%2 == 0 else qoi_winds+1 
 
     return eps, alpha0, lx, asp_ratio, nx, dt, Mt, eta, seed_val, nts, direc, mv_flag, tip_thres, \
