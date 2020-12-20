@@ -18,7 +18,7 @@ from numpy.random import random
 import time
 import math
 from QoIs import *
-from scipy.interpolate import griddata, interp2d
+from scipy.interpolate import griddata, interp1d, interp2d
 
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
@@ -1067,7 +1067,7 @@ elif ictype == 5: # radial initial condition
      #generate QoI boxes:
      len_box = qoi_winds;
      cent = int((len_box-1)/2)
-     box_per_gpu = 3
+     box_per_gpu = 8
      R_max = 6000
      delta_box = len_box*(dx*W0)
      Mt_box= delta_box/R_max/(tau0*dt)
@@ -1181,7 +1181,7 @@ Tw   = cuda.device_array([len_box,len_box],dtype=np.float64)
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
-if num_box<100: num_frame = 3*len_box 
+if num_box<100: num_frame = 2*len_box 
 else: num_frame = len_box
 tip_tracker_gpu = cuda.device_array([num_box,num_frame],dtype=np.int32) 
 tip_count = cuda.device_array(num_box,dtype=np.int32)
@@ -1254,7 +1254,7 @@ for kt in range(int(Mt/2)):
          nx0 = xB_gpu[Bid] + ha_wd; nz0 = zB_gpu[Bid] + ha_wd;
          if cp_cpu_flag[Bid] ==0:  ## assume dendrites grow in z direction, start the tip tracker
             #if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
-           if phi_old[nx0-cent,nz0-cent]>l2s:  
+           if phi_old[nx0-cent,nz0-cent]>l2s or phi_old[nx0,nz0-cent]>l2s or phi_old[nx0-cent,nz0]>l2s:  
              #print('rank',rank,'box id', Bid)
               rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, Tw, phi_old, U_old, T_m )
                
@@ -1262,6 +1262,7 @@ for kt in range(int(Mt/2)):
               cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw) 
               tipB[Bid] = cur_tip  
               if tip_count[Bid] < num_frame:
+                 if tip_count[Bid]==0 and cur_tip>cent: print('got tip position larger than the center initially !!!')
                  if tip_count[Bid]==1 and cur_tip==tip_tracker_gpu[Bid,0]: tip_count[Bid]=1       
                  else: tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1; \
                        print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
@@ -1270,16 +1271,19 @@ for kt in range(int(Mt/2)):
                  phi_cp = phiw.copy_to_host().T
                  U_cp  = Uw.copy_to_host().T
                  T_cp = Tw.copy_to_host().T
+                 tip_cp = tip_tracker_gpu[Bid,:].copy_to_host()
                  c_cp = ( 1+ (1-k)*U_cp )*( k*(1+phi_cp)/2 + (1-phi_cp)/2 ) / ( 1+ (1-k)*U_0 )
                  ## and the relavent QoI calculations
                  cp_cpu_flag[Bid] =1
                  inter_len[Bid] = interf_len(phi_cp,W0)
                  pri_spac[Bid], sec_spac[Bid] = spacings(phi_cp, cur_tip, (len_box-1)*dx*W0, dxd, mph)
+                 tip_cp = tip_cp[tip_cp>0.5]; vel_arr = np.diff(tip_cp)*dx*W0/(interq*dt*tau0);vel_itp = interp1d(tip_cp[:-1],vel_arr) 
+                 tip_vel[Bid] = vel_itp(cent);print('velocity distribution',vel_arr)
                  cqois[:,Bid] = conc_var(phi_cp,c_cp) 
                  Tz_cp = np.mean(T_cp, axis=1)
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
                  fs_cur = smooth_fs( fs_arr[:,Bid], len_box-2 )
-                 bool_arr= (fs_arr>1e-2)*(fs_arr<1)
+                 bool_arr= (fs_cur>1e-2)*(fs_cur<1)
                  fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
                  HCS[Bid], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
                  Kc_ave[Bid] = np.mean( permeability(fs_cur,pri_spac[Bid], mph) )
@@ -1310,8 +1314,8 @@ print('elapsed time: ', (end-start))
 if num_box!=0: 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB],'zB':z_1d[zB],'alphaB':alphaB,\
-  'num_box':num_box,'phi_win':phi_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
-'Kc_ave':Kc_ave,'cqois':cqois} )
+  'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
+'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel} )
 else:
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'num_box':num_box} )
