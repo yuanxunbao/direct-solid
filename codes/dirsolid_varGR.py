@@ -17,6 +17,7 @@ from numpy.random import random
 import time
 import math
 from QoIs import *
+from scipy.interpolate import interp1d 
 
 PARA = importlib.import_module(sys.argv[1])
 # import dsinput as PARA
@@ -634,11 +635,28 @@ elif ictype == 4:
     dd = sio.loadmat(sys.argv[2],squeeze_me = True)
     
     #tr_tip = dd['trans_tip']
-    tr_tip = 0
-    psi0 = np.repeat( (dd['op_psi_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+   # tr_tip = 0
+   # psi0 = np.repeat( (dd['op_psi_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+   # phi0 = np.tanh(psi0/sqrt2)
+   # U0 = np.repeat( (dd['Uc_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+   # zz = np.repeat( (dd['z_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
+
+    z_1d = dd['z_1d'][:,-1]/W0      # data from the transient run
+    U_1d = dd['Uc_1d'][:,-1]
+    psi_1d = dd['op_psi_1d'][:,-1]
+
+    z = (np.linspace(0+ z_1d[0],lz+ z_1d[0],nz)).astype(np.float64)
+    zz,xx = np.meshgrid(z, x)    
+
+    Uitp = interp1d(z_1d,U_1d)
+    psitp = interp1d(z_1d, psi_1d) 
+    psi0_1d= psitp(z)
+    U0_1d = Uitp(z)
+    print('the initial psi data', psi0_1d)
+    print('the initial U data', U0_1d)
+    U0 = np.repeat( U0_1d.reshape((1,nz)), nx, axis=0)
+    psi0 = np.repeat( psi0_1d.reshape((1,nz)), nx, axis=0)  
     phi0 = np.tanh(psi0/sqrt2)
-    U0 = np.repeat( (dd['Uc_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
-    zz = np.repeat( (dd['z_1d'])[tr_tip:nz+tr_tip,-1].reshape((1,nz)), nx, axis=0)
    # Ti = dd['Ttip'][0]
    # cl0 = ( 933.3 - Ti )/m_slope
    # U0 = ( (2*c0/cl0)/(1-phi0+k+k*phi0 )  -1)/(1-k)
@@ -778,40 +796,6 @@ for kt in range(int(Mt/2)):
 
            cur_tip = cur_tip-1
 
-    '''    
-    #save QoIs
-    if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
-        
-        kqs = int(np.floor((2*nt+2)/interq))
-        phi = phi_old.copy_to_host().T
-        #U  = U_old.copy_to_host().T
-        #cnc = c_infty* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
-        zz_cpu = zz_gpu.copy_to_host().T	      
-        Tz =  Ti + G*( zz[:,3] - R*nt*dt)
-        ztip, Ntip = ztip_Ntip( phi, zz, Ntip)
-        ztip_arr[kqs] = ztip
-        Ttip_arr[kqs] = Ti + G*( ztip - R*nt*dt )
-        inter_len[kqs] = interf_len(phi)*dxd**2
-        if alpha0 == 0:
-            alpha_arr[kqs] = alpha0
-            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)  # this needs to revisit
-        else:
-            imid = int(nz/2)
-            num_cell, est_len = crosspeak_counter(phi[Ntip-50,:], dxd, 0)
-            est_pri = lxd/num_cell
-            #print(est_pri) estimated primary spacing
-            Npri = round(est_pri/dxd)
-            alpha = tilted_angle(phi[imid:imid+10,:], phi[0:10,:], imid, Npri, int(np.sign(alpha0)))
-            alpha_arr[kqs] = alpha
-            #print('the measured growth angle is: ', alpha)
-            phi = plumb(phi,alpha)
-            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)
-            
-        phi_cp = tcp(phi,Ntip,-5); Tz_cp = tcpa(Tz,Ntip,-5)
-        fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
-        fs_arr = np.vstack(( fs_arr, fs ))
-    '''
-
 
         
     if (2*kt+2)%interq ==0:
@@ -828,12 +812,10 @@ for kt in range(int(Mt/2)):
         else: phi_cp = phi[:cur_tip,:]
         inter_len[kqs] = interf_len(phi_cp,W0)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
-        fsc=0
-        if cur_tip>fs_win+fsc:
-                phi_fs = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
-                Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
-                fs_arr[:,kqs] = solid_frac(phi_fs,  821, Tz_cp)
-                fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-1 )
+        if cur_tip>fs_win:
+                Tz_cp = Tz_cur[cur_tip-fs_win:cur_tip]
+                fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
+                fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-2 )
                 fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
                 HCS[kqs], HCS_arr = Kou_HCS(fs_cur, G_cur*dxd)
                 Kc = permeability(fs_cur,pri_spac[kqs], mph)

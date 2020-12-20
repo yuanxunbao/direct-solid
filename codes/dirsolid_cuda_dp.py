@@ -711,39 +711,6 @@ for kt in range(int(Mt/2)):
            # prev_tip = prev_tip-1
            cur_tip = cur_tip-1
     cur_tip_x, cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)
-    '''    
-    #save QoIs
-    if (2*nt+2)%interq==0 and cur_tip > int(nz/2):
-        
-        kqs = int(np.floor((2*nt+2)/interq))
-        phi = phi_old.copy_to_host().T
-        #U  = U_old.copy_to_host().T
-        #cnc = c_infty* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
-        zz_cpu = zz_gpu.copy_to_host().T	      
-        Tz =  Ti + G*( zz[:,3] - R*nt*dt)
-        ztip, Ntip = ztip_Ntip( phi, zz, Ntip)
-        ztip_arr[kqs] = ztip
-        Ttip_arr[kqs] = Ti + G*( ztip - R*nt*dt )
-        inter_len[kqs] = interf_len(phi)*dxd**2
-        if alpha0 == 0:
-            alpha_arr[kqs] = alpha0
-            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)  # this needs to revisit
-        else:
-            imid = int(nz/2)
-            num_cell, est_len = crosspeak_counter(phi[Ntip-50,:], dxd, 0)
-            est_pri = lxd/num_cell
-            #print(est_pri) estimated primary spacing
-            Npri = round(est_pri/dxd)
-            alpha = tilted_angle(phi[imid:imid+10,:], phi[0:10,:], imid, Npri, int(np.sign(alpha0)))
-            alpha_arr[kqs] = alpha
-            #print('the measured growth angle is: ', alpha)
-            phi = plumb(phi,alpha)
-            pri_spac[kqs], sec_spac[kqs] = spacings(phi, Ntip, lxd, dxd, mph)
-            
-        phi_cp = tcp(phi,Ntip,-5); Tz_cp = tcpa(Tz,Ntip,-5)
-        fs = solid_frac(phi_cp, Ntip, Te, Tz_cp)
-        fs_arr = np.vstack(( fs_arr, fs ))
-    '''
 
     if (2*kt+2)%interq ==0:
         kqs = int(np.floor((2*kt+2)/interq))-1
@@ -802,13 +769,13 @@ if len(sys.argv)==3:
      macrodata = sys.argv[2]
      GRt_data = sio.loadmat(macrodata)
      ztipt = z_1d[cur_tip,-1]*W0
-     Ttipt = Ti + G*ztipt
+     Ttipt = Ti + G*ztipt - G*R*Mt*dt*tau0
      cutid = cur_tip
      while op_phi_1d[cutid,-1]<0.999: cutid -=1
      op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
-     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:];
+     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:]; print('Umax', np.max(Uc_1d))
      z_1d = z_1d[cutid:,:];        
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip,'Ttip':Ttipt,\
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0,'trans_tip':cur_tip,'Ttip':Ttipt,\
 'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0})   # append
      sio.savemat(macrodata, GRt_data)
 if len(sys.argv)==4:
@@ -822,7 +789,7 @@ if len(sys.argv)==4:
      op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
      conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:];
      z_1d = z_1d[cutid:,:];
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d,'trans_tip':cur_tip,'Ttip':Ttipt,\
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0,'trans_tip':cur_tip,'Ttip':Ttipt,\
 'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0,'ztip_arr':ztip_qoi,'time_qoi':time_qoi})   # append
      sio.savemat('TID'+sys.argv[3]+macrodata, GRt_data)
 # save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
