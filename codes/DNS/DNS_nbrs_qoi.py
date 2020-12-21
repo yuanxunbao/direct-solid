@@ -1249,12 +1249,12 @@ for kt in range(int(Mt/2)):
     ## time_st_qoi: necessary, start the rotate--cal_tip, criterion: phiB > -0.999
     ## time_vel: necessary, end the list for tip position, criterion: cur_tip > center + 5
     ## time_end_qoi: this is not determined yet, for now criterion: cur_tip> max-5 need to transfer phi, U to cpu 
-    if (2*kt+2)%interq == 0 and phi_old[ha_wd,ha_wd] > l2s and end_qoi_flag == False :
+    if (2*kt+2)%interq == 0 and U_old[ha_wd,ha_wd] > l2s and end_qoi_flag == False :
        for Bid in range(num_box):
          nx0 = xB_gpu[Bid] + ha_wd; nz0 = zB_gpu[Bid] + ha_wd;
          if cp_cpu_flag[Bid] ==0:  ## assume dendrites grow in z direction, start the tip tracker
             #if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
-           if phi_old[nx0-cent,nz0-cent]>l2s or phi_old[nx0,nz0-cent]>l2s or phi_old[nx0-cent,nz0]>l2s:  
+           if U_old[nx0-cent,nz0-cent]> l2s : #or phi_old[nx0,nz0-cent]>l2s or phi_old[nx0-cent,nz0]>l2s:  
              #print('rank',rank,'box id', Bid)
               rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, Tw, phi_old, U_old, T_m )
                
@@ -1278,7 +1278,7 @@ for kt in range(int(Mt/2)):
                  inter_len[Bid] = interf_len(phi_cp,W0)
                  pri_spac[Bid], sec_spac[Bid] = spacings(phi_cp, cur_tip, (len_box-1)*dx*W0, dxd, mph)
                  tip_cp = tip_cp[tip_cp>0.5]; vel_arr = np.diff(tip_cp)*dx*W0/(interq*dt*tau0);vel_itp = interp1d(tip_cp[:-1],vel_arr) 
-                 tip_vel[Bid] = vel_itp(cent);print('velocity distribution',vel_arr)
+                 tip_vel[Bid] = vel_itp(cent);#print('velocity distribution',vel_arr)
                  cqois[:,Bid] = conc_var(phi_cp,c_cp) 
                  Tz_cp = np.mean(T_cp, axis=1)
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
