@@ -748,7 +748,7 @@ for kt in range(int(Mt/2)):
        print('time step = ', 2*(kt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
        print('tip position nz = ', cur_tip)
-       print('grids increased if velocity reach R', (Mt/nts)*dt*tau0*R/(dx*W0))
+       print('estimated increase of tip position if R is reached', (Mt/nts)*dt*tau0*R/(dx*W0))
        kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()

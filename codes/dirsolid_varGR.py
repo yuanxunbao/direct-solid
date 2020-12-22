@@ -644,10 +644,10 @@ elif ictype == 4:
     z_1d = dd['z_1d'][:,-1]/W0      # data from the transient run
     U_1d = dd['Uc_1d'][:,-1]
     psi_1d = dd['op_psi_1d'][:,-1]
-
+    print('the range of z_1d', z_1d[0],z_1d[-1])
     z = (np.linspace(0+ z_1d[0],lz+ z_1d[0],nz)).astype(np.float64)
     zz,xx = np.meshgrid(z, x)    
-
+    print('the range of z', z[0],z[-1])
     Uitp = interp1d(z_1d,U_1d)
     psitp = interp1d(z_1d, psi_1d) 
     psi0_1d= psitp(z)
