@@ -748,7 +748,7 @@ for kt in range(int(Mt/2)):
        print('time step = ', 2*(kt+1) )
        if mvf == True: print('tip position nz = ', cur_tip)
        print('tip position nz = ', cur_tip)
-
+       print('grids increased if velocity reach R', (Mt/nts)*dt*tau0*R/(dx*W0))
        kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
@@ -766,10 +766,11 @@ end = time.time()
 print('elapsed time: ', (end-start))
 
 if len(sys.argv)==3:
+     print('the data of transient run')
      macrodata = sys.argv[2]
      GRt_data = sio.loadmat(macrodata)
      ztipt = z_1d[cur_tip,-1]*W0
-     Ttipt = Ti + G*ztipt - G*R*Mt*dt*tau0
+     Ttipt = Ti + G*ztipt - G*R*Mt*dt*tau0; print('Tip temperature', Ttipt, 'K')
      cutid = cur_tip
      while op_phi_1d[cutid,-1]<0.999: cutid -=1
      op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
