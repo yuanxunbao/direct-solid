@@ -774,9 +774,10 @@ if len(sys.argv)==3:
      cutid = cur_tip
      while op_phi_1d[cutid,-1]<0.999: cutid -=1
      op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
-     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:]; print('Umax', np.max(Uc_1d))
+     conc_1d = conc_1d[cutid:,:]; print('cmax', np.max(conc_1d[:,-1])); Uc_1d = Uc_1d[cutid:,:]; print('Umax', np.max(Uc_1d[:,-1]))
+     grid_diff = int(5/W0/dx); #print('Udiff', Uc_1d[cur_tip-cutid+grid_diff,-1])
      z_1d = z_1d[cutid:,:];        
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0,'trans_tip':cur_tip,'Ttip':Ttipt,\
+     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0-R*Mt*dt*tau0,'trans_tip':cur_tip-cutid,'Ttip':Ttipt,\
 'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0})   # append
      sio.savemat(macrodata, GRt_data)
 if len(sys.argv)==4:
