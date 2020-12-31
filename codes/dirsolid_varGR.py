@@ -644,6 +644,7 @@ elif ictype == 4:
     z_1d = dd['z_1d'][:,-1]/W0      # data from the transient run
     U_1d = dd['Uc_1d'][:,-1]
     psi_1d = dd['op_psi_1d'][:,-1]
+    ztip0 = dd['ztip']
     print('the range of z_1d', z_1d[0],z_1d[-1])
     z = (np.linspace(0+ z_1d[0],lz+ z_1d[0],nz)).astype(np.float64)
     zz,xx = np.meshgrid(z, x)    
@@ -849,8 +850,8 @@ for kt in range(int(Mt/2)):
 end = time.time()
 print('elapsed time: ', (end-start))
 
-
-save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0-ztip_qoi[0],'dt':dt*tau0,\
+if ictype ==4: zz_mv = zz_mv-ztip0/W0
+save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
