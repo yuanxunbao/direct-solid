@@ -769,7 +769,7 @@ if len(sys.argv)==3:
      print('the data of transient run')
      macrodata = sys.argv[2]
      GRt_data = sio.loadmat(macrodata)
-     ztipt = z_1d[cur_tip,-1]*W0
+     ztipt = z_1d[cur_tip,-1]*W0 - R*Mt*dt*tau0
      Ttipt = Ti + G*ztipt - G*R*Mt*dt*tau0; print('Tip temperature', Ttipt, 'K')
      cutid = cur_tip
      while op_phi_1d[cutid,-1]<0.999: cutid -=1
