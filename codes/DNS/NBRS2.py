@@ -416,20 +416,20 @@ def sum_cur_tip(d_sum_arr, d_tip, d_phi):
     i = cuda.grid(1)
     val = 0. 
  
-    if (0 < i < m-1):
+    if ( i < m):
         val = d_phi[i, d_tip]
     
     cuda.atomic.add(d_sum_arr, 0, val)
 
 
 def compute_tip_pos(cur_tip,sum_arr, phi):
-    nx,nz=phi.shape
+    nx,nz=phi.shape; #print(nx,nz)
     while True :
 
         sum_arr[0] = 0.
         sum_cur_tip[bpg,tpb](sum_arr,  cur_tip, phi)
         mean_along_z = sum_arr[0] / nx
-
+        #print(mean_along_z)
         if (mean_along_z > l2s) and cur_tip < nz-1:
             cur_tip += 1
         else: 
@@ -930,13 +930,13 @@ def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro, phi0, 
     xBid = xBid[::down_samx]; zBid = zBid[::down_samz]
 
     XX, ZZ = np.meshgrid(X,Z,indexing='ij')
-    phitp = interp2d(x_1d, z_1d, phi0.T); Uitp = interp2d(x_1d, z_1d, U0.T)    #
+    phitp = interp2d(x_1d, z_1d, phi0.T); # Uitp = interp2d(x_1d, z_1d, U0.T)    #
     R = np.sqrt( (XX)**2 + (ZZ-center)**2)
-    phi_macro = phitp(X,Z).T; U_macro = Uitp(X,Z).T #
+    phi_macro = phitp(X,Z).T; #U_macro = Uitp(X,Z).T #
     #phi_macro = np.tanh((R-r0)/sqrt2)
     for i in xBid: 
      for j in zBid:
-       if phi_macro[i,j] < l2s and U_macro[i,j] < l2s: 
+       if phi_macro[i,j] < l2s: # and U_macro[i,j] < l2s: 
           xB.append(XX[i,j]); zB.append(ZZ[i,j]); 
     
     num_box = len(xB); alphaB=np.zeros(num_box)
@@ -1071,11 +1071,11 @@ elif ictype == 5: # radial initial condition
      #generate QoI boxes:
      len_box = qoi_winds;
      cent = int((len_box-1)/2)
-     box_per_gpu = 3
+     box_per_gpu = 8
      R_max = np.max(dd['R_t'])
      delta_box = len_box*(dx*W0)
      Mt_box= delta_box/R_max/(tau0*dt)
-     interq = int(Mt_box/50)
+     interq = int(Mt_box/20)
      interq = interq if interq%2==0 else interq-1
      if rank==0: print('length',delta_box,'the shortest time step to pass the box', Mt_box, 'time interval', interq)  
      num_box, xB, zB, alphaB = box_generator(x_1d, z_1d, box_per_gpu, box_per_gpu, len_box, X_cpu, Z_cpu, theta, phi0, U0)  
@@ -1266,9 +1266,9 @@ for kt in range(int(Mt/2)):
                
              # print('the tip poisition stored right now',tipB[Bid]) 
               cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw) 
-              tipB[Bid] = cur_tip  
+              tipB[Bid] = cur_tip; 
               if tip_count[Bid] < num_frame:
-                 if tip_count[Bid]==0 and cur_tip>cent: print('got tip position larger than the center initially !!!')
+                 if tip_count[Bid]==0 and cur_tip>cent: print('got tip position larger than the center initially !!!');
                  if tip_count[Bid]==1 and cur_tip==tip_tracker_gpu[Bid,0]: tip_count[Bid]=1       
                  else: tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1; \
                        print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
@@ -1317,15 +1317,15 @@ Tf = T_m.copy_to_host()
 af = alpha_m.copy_to_host()
 end = time.time()
 print('elapsed time: ', (end-start))
-'''
-if num_box==0: 
+
+if num_box!=0: 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB,\
   'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
 'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel} )
 else:
-'''
-save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
+
+  save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'num_box':num_box, 'Tf':Tf, 'af':af,\
   'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB} )
 # 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0, 'temp':Temp[ha_wd:-ha_wd,ha_wd:-ha_wd], 'a_field':a_field[ha_wd:-ha_wd,ha_wd:-ha_wd]} )
