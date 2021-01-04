@@ -1287,6 +1287,7 @@ for kt in range(int(Mt/2)):
                  tip_vel[Bid] = vel_itp(cent);#print('velocity distribution',vel_arr)
                  cqois[:,Bid] = conc_var(phi_cp,c_cp) 
                  Tz_cp = np.mean(T_cp, axis=1)
+                 Ttip_arr[Bid] = Tz_cp[-1]
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
                  fs_cur = smooth_fs( fs_arr[:,Bid], len_box-2 )
                  bool_arr= (fs_cur>1e-2)*(fs_cur<1)
@@ -1322,7 +1323,7 @@ if num_box!=0:
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB,\
   'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
-'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel} )
+'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'Ttip':Ttip_arr} )
 else:
 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
