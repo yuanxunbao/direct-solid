@@ -759,7 +759,7 @@ for kt in range(int(Mt/2)):
     # intR = R_tilde * (2*kt*dt) 
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, intR, lT_tilde, t_cur,  rng_states)
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
-    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
+    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_new, dPSI)
     intR += (R_cur*tau0/W0)*dt
    
     # =================================================================
@@ -774,7 +774,7 @@ for kt in range(int(Mt/2)):
     # intR = R_tilde *(2*kt+1)*dt
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, intR, lT_tilde, t_cur, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
-    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
+    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
     intR += (R_cur*tau0/W0)*dt   
 
     # =================================================================
@@ -818,7 +818,7 @@ for kt in range(int(Mt/2)):
                 fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
                 fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-2 )
                 fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
-                HCS[kqs], HCS_arr = Kou_HCS(fs_cur, G_cur*dxd)
+                HCS[kqs], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
                 Kc = permeability(fs_cur,pri_spac[kqs], mph)
                 Kc_ave[kqs] = np.mean(Kc) 
         #fs_arr = np.vstack(( fs_arr, fs ))

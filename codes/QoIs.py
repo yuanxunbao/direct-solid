@@ -235,10 +235,11 @@ def crosspeak_counter(u, dx, indicator): # u is a 1D array
     
 
     intersec = np.argwhere(np.diff(np.sign( u - indicator)))
-    if len(intersec) == 0: dist = 0
-    else: dist = intersec[-1]-intersec[0]
-    
-    return int( len(intersec) /2), dist*dx 
+  #  if len(intersec) == 0: dist = 0
+    if len(intersec) == 0: return 0, 0.0
+  #  else: dist = intersec[-1]-intersec[0]
+    else: dist = intersec[-1]-intersec[0]; return len(intersec)/2, dist*dx
+  #  return int( len(intersec) /2), dist*dx 
 
 def identify_peak(u): # u is a 1D array (nx,)
     
@@ -270,10 +271,10 @@ def smooth_fs(fs,winds):
 
 
 
-def Kou_HCS(fs, dT):   # input interval of temperature level sets
+def Kou_HCS(fs, Tz):   # input interval of temperature level sets
     
     sq_fs = np.sqrt(fs)
-    dTdfsh = (2*dT )/(sq_fs[2:]-sq_fs[:-2])
+    dTdfsh = (Tz[2:] - Tz[:-2] )/(sq_fs[2:]-sq_fs[:-2])
     
    # HCS_K_arr = np.absolute( dTdfsh )
    #  HCS_K = np.amax( HCS_K_arr )
