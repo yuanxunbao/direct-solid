@@ -817,7 +817,9 @@ for kt in range(int(Mt/2)):
                 Tz_cp = Tz_cur[cur_tip-fs_win:cur_tip]
                 fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
                 fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-2 )
-                fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
+                bool_arr= (fs_cur>1e-2)*(fs_cur<1)
+                fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]   
+                #fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
                 HCS[kqs], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
                 Kc = permeability(fs_cur,pri_spac[kqs], mph)
                 Kc_ave[kqs] = np.mean(Kc) 
