@@ -681,14 +681,14 @@ for kt in range(int(Mt/2)):
     # =================================================================
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states)
     setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
-    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_old, dPSI)
+    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_new, dPSI)
 
     # =================================================================
     # time step: t = (2*nt+1) * dt
     # ================================================================= 
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, 2*kt+1, rng_states)
     setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
-    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_new, dPSI) 
+    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
    
     # =================================================================
     # If moving frame flag is set to TRUE
