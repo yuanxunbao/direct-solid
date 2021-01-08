@@ -40,7 +40,7 @@ l2s = -0.995
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'DNSalpha_comm_hg_intq50'+ (sys.argv[2])[:-4] + '_noise'+ \
+filename = 'DNSalpha_comm_nbrs_intq50'+ (sys.argv[2])[:-4] + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val) 
 
@@ -647,6 +647,38 @@ def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, nt, rng_states, T_m, alp
         ps_new[i,j] = ps[i,j] + ( dt * dpsi[i,j] + dt_sqrt*dxdz_in_sqrt*eta * beta_ij ) 
         ph_new[i,j] = math.tanh(ps_new[i,j]/sqrt2)
 
+        # a new section here to change the misorientation angle for boundary points
+        if ph_new[i,j] > l2s and ph[i,j] < l2s: # flip the misorientation angle from 0 to angle of the nearest solid grid
+          if -1e-15 < alpha < 1e-15:
+             alphan = alpha; flip = False
+             n1 = 0; n2 = 0; n3 = 0;
+             alpha1 = 0; alpha2 = 0; alpha3 = 0;
+             num_nbr = 9; len_nbr = 3;
+             ## count the numbers for every angle:
+             for iid in range(num_nbr):
+                 xi = iid%len_nbr; yi = int(iid/len_nbr)
+                 if ph[i+xi-1,j+yi-1] > l2s: 
+                       temp = alpha_m[i+xi-1,j+yi-1]
+                       if   alpha1==0: n1 +=1; alpha1 = temp;
+                       elif -1e-15 < temp-alpha1 < 1e-15: n1 +=1
+                       elif alpha2==0: n2 +=1; alpha2 = temp;
+                       elif -1e-15 < temp-alpha2 < 1e-15: n2 +=1
+                       elif alpha3==0: n3 +=1; alpha3 = temp;
+                       elif -1e-15 < temp-alpha3 < 1e-15: n3 +=1 
+                       else: print("case not closed!!!!")
+             ### find the maximum number of occurence:
+             if n1>=n2 and n1 >=n3: alpha_m[i,j] = alpha1
+             elif n2>=n3: alpha_m[i,j] = alpha2
+             else: alpha_m[i,j] = alpha3    
+             if n1==0 and n2==0 and n3==0 and ha_wd-1<i<m-ha_wd and ha_wd-1<j<n-ha_wd:
+                     print('psi',ps[i,j],ps_new[i,j],'i',i,'j',j,'cannot find the solid points in the 8 neighbors')
+            # else: alpha_m[i,j] = alphan
+         # else:
+         #    if rank==0:
+         #       print('alpha',alpha,'i',i,'j',j,'the angle of liquid should be set to zero initially!!!')
+                #sys.exit(1)
+        if ph_new[i,j] < l2s and ph[i,j] > l2s: # flip the misorientation angle from solid to zero
+           alpha_m[i,j] = 0.0
 
 @cuda.jit
 def moveframe(ps, ph, U, zz, ps_buff, ph_buff, U_buff, zz_buff):
@@ -879,21 +911,21 @@ def rotate( Bid, len_box, nx0, nz0, alpha_arr, phiw, Uw, Tw, phib, Ub, Tb ):
 def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro, phi0, U0):
     # CPU function call initially
     # leave margin in every GPU
-    # dimensions x,y (nx+2*ha_wd, nz+2*ha_wd);
+    # dimensions x,y (nx+2*ha_wd, nz+2*ha_wd); 
     # define a tracker based on the location of base points (B), phi[B] > QoI_thre, start the rotation and calculate tip position
     # if the tip position out of the rotated box, turn the flag to false, and pass to cpu.
-    # define another tracker phi[B] < vel_thre, between 2 trackers, record tip position every time step for tip velocity
+    # define another tracker phi[B] < vel_thre, between 2 trackers, record tip position every time step for tip velocity    
+    
+    xB = []; zB = [];       
 
-    xB = []; zB = [];
-
-    # 1. downsampling the macrodata to select the points B.
+    # 1. downsampling the macrodata to select the points B. 
     x_margin = 0.75*Len*dx; z_margin = 0.75*Len*dz
-    xmin = x_1d[0] + x_margin;  xmax = x_1d[-1] - x_margin
+    xmin = x_1d[0] + x_margin;  xmax = x_1d[-1] - x_margin 
     zmin = z_1d[0] + z_margin;  zmax = z_1d[-1] - z_margin
 
-
+    
    # x_in=(X>xmin)*1*(X<xmax); z_in=(Z>zmin)*1*(Z<zmax);
-   # xBid = [i for i, x in enumerate( (X_arr>xmin)*1*(X_arr<xmax) ) if x]; down_samx = 1 #int( len(xBid)/num_boxx )
+   # xBid = [i for i, x in enumerate( (X_arr>xmin)*1*(X_arr<xmax) ) if x]; down_samx = 1 #int( len(xBid)/num_boxx ) 
    # zBid = [i for i, x in enumerate( (Z_arr>zmin)*1*(Z_arr<zmax) ) if x]; down_samz = 1 #int( len(zBid)/num_boxz )
    # xBid = xBid[::down_samx]; zBid = zBid[::down_samz]
     X_arr = dd['X_qoi'].flatten()/W0; Z_arr = dd['Y_qoi'].flatten()/W0
@@ -902,20 +934,19 @@ def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro, phi0, 
    # R = np.sqrt( (XX)**2 + (ZZ-center)**2)
     #phi_macro = phitp(X,Z).T; #U_macro = Uitp(X,Z).T #
     #phi_macro = np.tanh((R-r0)/sqrt2)
-    for i in range(len(X_arr)):
+    for i in range(len(X_arr)): 
     # for j in zBid:
-     #  if phi_macro[i,j] < l2s: # and U_macro[i,j] < l2s:
+     #  if phi_macro[i,j] < l2s: # and U_macro[i,j] < l2s: 
        if xmin<X_arr[i]<xmax and zmin<Z_arr[i]<zmax and phitp(X_arr[i], Z_arr[i]) < l2s: # and U_macro[i,j] < l2s:
-          xB.append(X_arr[i]); zB.append(Z_arr[i]);#print(X_arr, Z_arr)
-
+          xB.append(X_arr[i]); zB.append(Z_arr[i]);#print(X_arr, Z_arr) 
+    
     num_box = len(xB); alphaB=np.zeros(num_box)
     xBid = np.zeros(num_box, dtype=int); zBid = np.zeros(num_box, dtype=int);
     for i in range(num_box):
           xBid[i] = np.argmin(np.absolute(x_1d-xB[i]));
           zBid[i] = np.argmin(np.absolute(z_1d-zB[i]));
           alphaB[i] = alpha_micro[xBid[i],zBid[i]]
-    return num_box, xBid, zBid, alphaB
-
+    return num_box, xBid, zBid, alphaB 
 
 
 def save_data(psi,U,misor,z):
@@ -1035,7 +1066,7 @@ elif ictype == 5: # radial initial condition
      theta[where_are_NaNs] = 0
      i_theta = (np.absolute( (pi/2+theta) /(pi/2/n_theta))).astype(int)
 
-     alpha0=theta #theta_arr[i_theta-1]*(phi0>l2s)
+     alpha0=theta_arr[i_theta-1]*(phi0>l2s)
      #print('i_theta', i_theta)
      #print('alpha0', alpha0)
      #generate QoI boxes:
@@ -1165,16 +1196,16 @@ BCsend = cuda.device_array([2*nx+2*nz,5*ha_wd],dtype=np.float64);
 BCrecv = cuda.device_array([2*nx+2*nz+4*ha_wd,5*ha_wd],dtype=np.float64)
 #bpgBC = (2*bpg_x+2*bpg_y,1)
 bpgBC = (2*(bpg_x+bpg_y),math.ceil(5*ha_wd/tpb) )
-BC_421[bpgBC,tpb2d](psi_old,phi_old,U_old, dPSI, phi_old, BCsend)
+BC_421[bpgBC,tpb2d](psi_old,phi_old,U_old, dPSI, alpha_m, BCsend)
 #if rank == 0: print('sendbuf',BCsend.copy_to_host())
 comm.Barrier()
 BC_comm(BCsend, BCrecv, nx ,nz,0)
 comm.Barrier()
-BC_124[bpgBC,tpb2d](psi_old,phi_old,U_old, dPSI, phi_old, BCrecv)
-BC_124[bpgBC,tpb2d](psi_new,phi_new,U_new, dPSI, phi_new, BCrecv)
+BC_124[bpgBC,tpb2d](psi_old,phi_old,U_old, dPSI, alpha_m, BCrecv)
+BC_124[bpgBC,tpb2d](psi_new,phi_new,U_new, dPSI, alpha_m, BCrecv)
 #if rank == 0: print('recvbuf',BCrecv.copy_to_host())
-setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, phi_old,px, py, nprocx, nprocy, ha_wd)
-setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, phi_new,px, py, nprocx, nprocy, ha_wd)
+setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, alpha_m,px, py, nprocx, nprocy, ha_wd)
+setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, alpha_m,px, py, nprocx, nprocy, ha_wd)
 # march two steps per loop
 start = time.time()
 #print(U_cpu[ha_wd:-ha_wd,ha_wd:-ha_wd])
@@ -1195,14 +1226,14 @@ for kt in range(int(Mt/2)):
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states, T_m, alpha_m)
     #if ha_wd==1:
     if (2*kt+2)%ha_wd==0:
-      BC_421[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,phi_old, BCsend)
+      BC_421[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,alpha_m, BCsend)
       comm.Barrier()
     #  print('ready to send data', rank , time.time())
       BC_comm(BCsend, BCrecv, nx ,nz,2*kt+1)
       comm.Barrier()
     #  print('finish receive data', rank, time.time())
-      BC_124[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,phi_old, BCrecv)
-    setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, phi_old, px, py, nprocx, nprocy, ha_wd)
+      BC_124[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,alpha_m, BCrecv)
+    setNBC_gpu[bpg,tpb](psi_new,phi_new,U_old,dPSI, alpha_m, px, py, nprocx, nprocy, ha_wd)
     rhs_U[bpg2d, tpb2d](U_old, U_new, phi_new, dPSI)
     # =================================================================
     # time step: t = (2*nt+1) * dt
@@ -1212,12 +1243,12 @@ for kt in range(int(Mt/2)):
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, 2*kt+1, rng_states, T_m, alpha_m)
  
     if (2*kt+2)%ha_wd==0: #ha_wd==1 or ha_wd==2:
-      BC_421[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, phi_new,BCsend)
+      BC_421[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, alpha_m,BCsend)
       comm.Barrier()
       BC_comm(BCsend, BCrecv, nx ,nz,2*kt+2)
       comm.Barrier()
-      BC_124[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, phi_new, BCrecv)
-    setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, phi_new, px, py, nprocx, nprocy, ha_wd)
+      BC_124[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, alpha_m, BCrecv)
+    setNBC_gpu[bpg,tpb](psi_old,phi_old,U_new,dPSI, alpha_m, px, py, nprocx, nprocy, ha_wd)
     rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
 
     ## QoI section: the windows are fixed at the beginning, the choice we have is when to calculate QoIs.
