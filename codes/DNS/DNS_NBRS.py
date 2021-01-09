@@ -1324,7 +1324,7 @@ if num_box!=0:
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB,\
   'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
-'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'Ttip':Ttip_arr} )
+'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'Ttip':Ttip_arr,'fs_arr':fs_arr} )
 else:
 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\

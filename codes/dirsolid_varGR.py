@@ -857,8 +857,8 @@ save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
 
-
-save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\
+if ictype ==4: ztip_qoi = ztip_qoi-ztip0
+save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi,\
 'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
 'fs_arr':fs_arr,'HCS':HCS,'Kc_ave':Kc_ave})
 
