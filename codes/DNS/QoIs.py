@@ -274,8 +274,8 @@ def smooth_fs(fs,winds):
 def Kou_HCS(fs, Tz):   # input interval of temperature level sets
     
     sq_fs = np.sqrt(fs)
-    dTdfsh = (Tz[2:] - Tz[:-2] )/(sq_fs[2:]-sq_fs[:-2])
-    
+#    dTdfsh = (Tz[2:] - Tz[:-2] )/(sq_fs[2:]-sq_fs[:-2])
+    dTdfsh = (Tz[1:] - Tz[:-1] )/(sq_fs[1:]-sq_fs[:-1])   
    # HCS_K_arr = np.absolute( dTdfsh )
    #  HCS_K = np.amax( HCS_K_arr )
     HCS_K = np.linalg.norm(dTdfsh,np.inf)
