@@ -18,10 +18,10 @@ from math import pi
 
 #filebase = sys.argv[1];
 #nx = int(sys.argv[2])
-ratio = 0.5 #float(sys.argv[3])
+ratio = 1 #float(sys.argv[3])
 #ny = int(nx*ratio)
 #print(nx,ny)
-lx = 40
+lx = 900
 ly = lx*ratio
 print('the limits for geometry lx, ly: ',lx,ly)
 
@@ -31,7 +31,7 @@ print('the limits for geometry lx, ly: ',lx,ly)
 
 names=['Ttip','tip_vel', 'pri_spac','sec_spac','interf_len','HCS', 'Kc_ave','cqois','cqois','cqois']
 range_l = [885, 0, 0, 0, 0, 20, 0, 0, 0, 0]
-range_h = [920, 170000, 2, 1, 15, 100, 10e-4, 3, 3, 3]
+range_h = [920, 8000, 15, 10, 2, 60, 1e-2, 3, 3, 3]
 titles=['$tip\ temperature (K)$','$tip\ velocity (\mu m/s)$', '$primary\ spacing\ (\mu m)$','$secondary\ spacing\ ({\mu}m)$',\
 '$interfacial\ length$','$HCS\ (K)$', '$permeability\ ({\mu m}^{2})$','','','$solid\ concentration\ (wt\%)$']
 
@@ -41,7 +41,7 @@ vmin = np.float64(range_l[qid])
 vmax = np.float64(range_h[qid])
 # load line model qoi data 
 
-
+hb = 25
 colors = [(0.2, 0.4, 1, 1),(1, 0., 0., 1),(0.3, 1, 0.3, 1),(0.3, 0.3, 0.3, 1)]
 transpen=0.25;ebwidth = 3; m_size=30; tc=1.96
 ebcolors = [(0.2, 0.4, 1, transpen),(1, 0., 0., transpen),(0.3, 1,0.3, transpen),(0.3, 0.3, 0.3, transpen)]
@@ -50,14 +50,15 @@ ebcolors = [(0.2, 0.4, 1, transpen),(1, 0., 0., transpen),(0.3, 1,0.3, transpen)
 linedata0 = sio.loadmat('line_QoIs0.mat',squeeze_me = True)
 linedata1 = sio.loadmat('line_QoIs1.mat',squeeze_me = True)
 linedata2 = sio.loadmat('line_QoIs2.mat',squeeze_me = True)
-data = sio.loadmat('dns_QoIs0.mat',squeeze_me = True)
-macrodata=sio.loadmat('AM2.mat',squeeze_me = True)
+hgdata = sio.loadmat('dns_QoI_hg.mat',squeeze_me = True)
+nbdata = sio.loadmat('dns_QoI_nb.mat',squeeze_me = True)
+macrodata=sio.loadmat('WD1.mat',squeeze_me = True)
 X_arr=macrodata['X_arr']
 Y_arr=macrodata['Y_arr']
 line_angle=macrodata['line_angle']
 line_xst=macrodata['line_xst']
 line_yst=macrodata['line_yst']
-print(line_xst);print(line_yst)
+print(line_angle*180/pi); print(line_xst);print(line_yst)
 for qid in range(8):
   if qid ==7: qid +=2
   qoi_name = names[qid]
@@ -65,44 +66,67 @@ for qid in range(8):
   vmax = np.float64(range_h[qid])
   fig1 = plt.figure(figsize=[6, 12]) 
   fig1.suptitle(titles[qid], fontsize=16)
-  xB = data['xB']; zB = data['zB']; qoi = data['qoi_arr'][qid,:];qoi_std =data['qoi_std'][qid,:]; 
+
+#####traj1
   line_id = 0; line_dist=linedata0['dist']; line_qoi=linedata0['qoi_arr'][qid,:];line_std=tc*linedata0['qoi_std'][qid,:];
+  xB = nbdata['xB']; zB = nbdata['zB']; qoi = nbdata['qoi_arr'][qid,:];  
   bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
-  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi=qoi[bool_arr];qoi_std=qoi_std[bool_arr]; 
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi1=qoi[bool_arr]; 
   dist = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); print('distance', dist)
+
+  xB = hgdata['xB']; zB = hgdata['zB']; qoi = hgdata['qoi_arr'][qid,:];
+  bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi2=qoi[bool_arr];
+  dist2 = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); #print('distance', dist)
+
   ax0 = fig1.add_subplot(311)
   if qid==1 or qid==0: ax0.errorbar(line_dist,line_qoi,yerr=line_std,c=colors[0],elinewidth=ebwidth,ecolor = ebcolors[0])
-  else: ax0.errorbar(line_dist-1.5,line_qoi,yerr=line_std,c=colors[0],elinewidth=ebwidth,ecolor = ebcolors[0])
-  if qid==0: ax0.scatter(dist+1.5,qoi,s=m_size,c='r',marker='x');
-  else:ax0.scatter(dist,qoi,s=m_size,c='r',marker='x');
+  else: ax0.errorbar(line_dist-hb,line_qoi,yerr=line_std,c=colors[0],elinewidth=ebwidth,ecolor = ebcolors[0])
+  if qid==0: ax0.scatter(dist+hb,qoi1,s=m_size,c='r',marker='x'); ax0.scatter(dist2+hb,qoi2,s=m_size,c='c',marker='+');
+  else:ax0.scatter(dist,qoi1,s=m_size,c='r',marker='x'); ax0.scatter(dist2,qoi2,s=m_size,c='c',marker='+');
   plt.xlim(0,ly);plt.ylim(range_l[qid],range_h[qid])
-  plt.xlabel('traveled distance');plt.legend(['DNS simulation (static)','$line\ model\ 86^{\circ}$'])
+  plt.xlabel('traveled distance');plt.legend(['DNS simulation (dynamic)','DNS simulation (static)','$line\ model\ 81^{\circ}$'])
 
-  xB = data['xB']; zB = data['zB']; qoi = data['qoi_arr'][qid,:];qoi_std =data['qoi_std'][qid,:];
+######traj2
   line_id = 1; line_dist=linedata1['dist']; line_qoi=linedata1['qoi_arr'][qid,:];line_std=tc*linedata1['qoi_std'][qid,:];
+  xB = nbdata['xB']; zB = nbdata['zB']; qoi = nbdata['qoi_arr'][qid,:];
   bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
-  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi=qoi[bool_arr];qoi_std=qoi_std[bool_arr];
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi1=qoi[bool_arr];
   dist = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); print('distance', dist)
+
+  xB = hgdata['xB']; zB = hgdata['zB']; qoi = hgdata['qoi_arr'][qid,:];
+  bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi2=qoi[bool_arr];
+  dist2 = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); #print('distance', dist)
+
   ax1 = fig1.add_subplot(312)
   if qid==1 or qid==0: ax1.errorbar(line_dist,line_qoi,yerr=line_std,c=colors[3],elinewidth=ebwidth,ecolor = ebcolors[3])
-  else: ax1.errorbar(line_dist-1.5,line_qoi,yerr=line_std,c=colors[3],elinewidth=ebwidth,ecolor = ebcolors[3])
-  if qid==0: ax1.scatter(dist+1.5,qoi,s=m_size,c='r',marker='x'); 
-  else:ax1.scatter(dist,qoi,s=m_size,c='r',marker='x'); 
+  else: ax1.errorbar(line_dist-hb,line_qoi,yerr=line_std,c=colors[3],elinewidth=ebwidth,ecolor = ebcolors[3])
+  if qid==0: ax1.scatter(dist+hb,qoi1,s=m_size,c='r',marker='x'); ax1.scatter(dist2+hb,qoi2,s=m_size,c='c',marker='+');
+  else:ax1.scatter(dist,qoi1,s=m_size,c='r',marker='x'); ax1.scatter(dist2,qoi2,s=m_size,c='c',marker='+');
   plt.xlim(0,ly);plt.ylim(range_l[qid],range_h[qid])
-  plt.xlabel('traveled distance');plt.legend(['DNS simulation (static)','$line\ model\ 75^{\circ}$'])
+  plt.xlabel('traveled distance');plt.legend(['DNS simulation (dynamic)','DNS simulation (static)','$line\ model\ 58^{\circ}$'])
 
-  xB = data['xB']; zB = data['zB']; qoi = data['qoi_arr'][qid,:];qoi_std =data['qoi_std'][qid,:];
+
+### traj3
   line_id = 2; line_dist=linedata2['dist']; line_qoi=linedata2['qoi_arr'][qid,:];line_std=tc*linedata2['qoi_std'][qid,:];
+  xB = nbdata['xB']; zB = nbdata['zB']; qoi = nbdata['qoi_arr'][qid,:];
   bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
-  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi=qoi[bool_arr];qoi_std=qoi_std[bool_arr];
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi1=qoi[bool_arr];
   dist = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); print('distance', dist)
+
+  xB = hgdata['xB']; zB = hgdata['zB']; qoi = hgdata['qoi_arr'][qid,:];
+  bool_arr = np.absolute( np.arctan((zB-line_yst[line_id])/(xB-line_xst[line_id]))-line_angle[line_id]) <0.01
+  xB = xB[bool_arr]; zB = zB[bool_arr]; qoi2=qoi[bool_arr];
+  dist2 = np.sqrt((zB-line_yst[line_id])**2+(xB-line_xst[line_id])**2); #print('distance', dist)
+  
   ax2 = fig1.add_subplot(313)
   if qid==1 or qid==0: ax2.errorbar(line_dist,line_qoi,yerr=line_std,c=colors[2],elinewidth=ebwidth,ecolor = ebcolors[2])
-  else: ax2.errorbar(line_dist-1.5,line_qoi,yerr=line_std,c=colors[2],elinewidth=ebwidth,ecolor = ebcolors[2])
-  if qid==0: ax2.scatter(dist+1.5,qoi,s=m_size,c='r',marker='x'); 
-  else:ax2.scatter(dist,qoi,s=m_size,c='r',marker='x');
+  else: ax2.errorbar(line_dist-hb,line_qoi,yerr=line_std,c=colors[2],elinewidth=ebwidth,ecolor = ebcolors[2])
+  if qid==0: ax2.scatter(dist+hb,qoi1,s=m_size,c='r',marker='x'); ax2.scatter(dist2+hb,qoi2,s=m_size,c='c',marker='+');
+  else:ax2.scatter(dist,qoi1,s=m_size,c='r',marker='x'); ax2.scatter(dist2,qoi2,s=m_size,c='c',marker='+');
   plt.xlim(0,ly);plt.ylim(range_l[qid],range_h[qid])
-  plt.xlabel('traveled distance');plt.legend(['DNS simulation (static)','$line\ model\ 53^{\circ}$'])
+  plt.xlabel('traveled distance');plt.legend(['DNS simulation (dynamic)','DNS simulation (static)','$line\ model\ 27^{\circ}$'])
 
   plt.savefig('HG_qoi_' + qoi_name +'.png',dpi=400)
   plt.close()

@@ -1009,12 +1009,12 @@ elif ictype == 5: # radial initial condition
      #grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      #print('the introduced source term',np.max(1-grad2))
      #print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     r0 = 61.04763994/W0
-     center = 35.7938929/W0
+     r0 = 815.526/W0 #80.84419816935124 815.5263374281619
+     center = 80.844/W0
      r = np.sqrt( (xx)**2 + (zz-center)**2)
     # psi0 =  r-r0
      grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
-     print('the introduced source term',np.max(1-grad2))
+     print('rank',rank,'the introduced source term',np.max(1-grad2))
      phi0 = np.tanh(psi0/sqrt2)
 
      U0 =  griddata(points, U_value, (xx*W0,zz*W0), method='cubic') 

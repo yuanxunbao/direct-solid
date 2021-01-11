@@ -1040,10 +1040,10 @@ elif ictype == 5: # radial initial condition
      #grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      #print('the introduced source term',np.max(1-grad2))
      #print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     r0 = 61.04763994/W0
-     center = 35.7938929/W0
+     r0 = 815.526/W0 #80.84419816935124 815.5263374281619
+     center = 80.844/W0
      r = np.sqrt( (xx)**2 + (zz-center)**2)
-    # psi0 =  r-r0
+     #psi0 =  r-r0
      grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      print('the introduced source term',np.max(1-grad2))
      phi0 = np.tanh(psi0/sqrt2)
@@ -1177,9 +1177,9 @@ time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
-phiw = cuda.device_array([len_box,len_box],dtype=np.float64) 
-Uw   = cuda.device_array([len_box,len_box],dtype=np.float64)
-Tw   = cuda.device_array([len_box,len_box],dtype=np.float64) 
+phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((len_box,len_box))
+Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((len_box,len_box))
+Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((len_box,len_box))
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)

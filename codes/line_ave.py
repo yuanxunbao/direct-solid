@@ -8,7 +8,7 @@ import matplotlib
 import copy
 import glob
 
-num_reali = 12
+num_reali = 8
 
 num_traj = 1
 
@@ -19,7 +19,7 @@ num_qois = 17
 qoi_list = ['Ttip_arr','ztip_qoi','pri_spac','sec_spac','interfl','HCS','Kc_ave','c1','c2','c3',\
             'c4','c5','c6','c7','c8','c9','c10']
 
-keyword = ['angle75']    
+keyword = ['82.0']    
     
 list1 = glob.glob('*'+ keyword[0] + '*QoIs.mat')  
 
@@ -69,9 +69,8 @@ for k in range(num_traj):
     dvel_line = np.hstack((0,np.diff(d2c_line_std)/dt))
     qoi_arr[1,:] = vel_line
     qoi_std[1,:] = dvel_line
-    qoi_list = ['Ttip_arr','tip_vel','pri_spac','sec_spac','interfl','HCS','Kc_ave','c1','c2','c3',\
-            'c4','c5','c6','c7','c8','c9','c10']
-    savemat('line_' +'QoIs1.mat',{'time_qoi':time1,'dist':temp,'qoi_list':qoi_list,'qoi_arr':qoi_arr,'qoi_std':qoi_std})  
+    print(temp)
+    savemat('line_' +'QoIs0.mat',{'time_qoi':time1,'dist':temp,'qoi_list':qoi_list,'qoi_arr':qoi_arr,'qoi_std':qoi_std})  
 
 
 
