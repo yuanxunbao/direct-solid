@@ -1177,9 +1177,10 @@ time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
-phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((len_box,len_box))
-Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((len_box,len_box))
-Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((len_box,len_box))
+qoi_winds = len_box - 10
+phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box))
+Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((qoi_winds,len_box))
+Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((qoi_winds,len_box))
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
@@ -1275,9 +1276,9 @@ for kt in range(int(Mt/2)):
                        print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
               if cur_tip>len_box-5: 
                  print('the box no.', Bid, 'in rank',rank,' turn off and transfer data to cpu, current tip', cur_tip )
-                 phi_cp = phiw.copy_to_host().T
-                 U_cp  = Uw.copy_to_host().T
-                 T_cp = Tw.copy_to_host().T
+                 phi_cp = (phiw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
+                 U_cp  = (Uw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
+                 T_cp = (Tw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
                  tip_cp = tip_tracker_gpu[Bid,:].copy_to_host()
                  c_cp = c_inf*( 1+ (1-k)*U_cp )*( k*(1+phi_cp)/2 + (1-phi_cp)/2 ) / ( 1+ (1-k)*U_0 )
                  ## and the relavent QoI calculations
