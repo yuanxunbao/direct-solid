@@ -1012,7 +1012,7 @@ elif ictype == 5: # radial initial condition
      r0 = 815.526/W0 #80.84419816935124 815.5263374281619
      center = 80.844/W0
      r = np.sqrt( (xx)**2 + (zz-center)**2)
-    # psi0 =  r-r0
+     psi0 =  r-r0
      grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      print('rank',rank,'the introduced source term',np.max(1-grad2))
      phi0 = np.tanh(psi0/sqrt2)
@@ -1146,9 +1146,10 @@ time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
-phiw = cuda.device_array([len_box,len_box],dtype=np.float64) 
-Uw   = cuda.device_array([len_box,len_box],dtype=np.float64)
-Tw   = cuda.device_array([len_box,len_box],dtype=np.float64) 
+qoi_winds = len_box - 10
+phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box)) 
+Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((qoi_winds,len_box))
+Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((qoi_winds,len_box))
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
@@ -1244,9 +1245,9 @@ for kt in range(int(Mt/2)):
                        print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
               if cur_tip>len_box-5: 
                  print('the box no.', Bid, 'in rank',rank,' turn off and transfer data to cpu, current tip', cur_tip )
-                 phi_cp = phiw.copy_to_host().T
-                 U_cp  = Uw.copy_to_host().T
-                 T_cp = Tw.copy_to_host().T
+                 phi_cp = (phiw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
+                 U_cp  = (Uw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
+                 T_cp = (Tw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
                  tip_cp = tip_tracker_gpu[Bid,:].copy_to_host()
                  c_cp = c_inf*( 1+ (1-k)*U_cp )*( k*(1+phi_cp)/2 + (1-phi_cp)/2 ) / ( 1+ (1-k)*U_0 )
                  ## and the relavent QoI calculations

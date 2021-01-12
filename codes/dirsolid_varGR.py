@@ -731,7 +731,7 @@ print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_win = qoi_winds - 10
+qoi_winds -= 10; fs_win = qoi_winds
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
 HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
@@ -814,9 +814,9 @@ for kt in range(int(Mt/2)):
         inter_len[kqs] = interf_len(phi_cp,W0)
         pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
         if cur_tip>fs_win:
-                phi_fs = phi_cp[-fs_win:,:]
+                #phi_fs = phi_cp[-fs_win:,:]
                 Tz_cp = Tz_cur[cur_tip-fs_win:cur_tip]
-                fs_arr[:,kqs] = solid_frac(phi_fs,  821, Tz_cp)
+                fs_arr[:,kqs] = solid_frac(phi_cp,  821, Tz_cp)
                 fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-2 )
                 bool_arr= (fs_cur>1e-2)*(fs_cur<1)
                 fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]   
