@@ -1040,8 +1040,8 @@ elif ictype == 5: # radial initial condition
      #grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      #print('the introduced source term',np.max(1-grad2))
      #print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     r0 = 815.526/W0 #80.84419816935124 815.5263374281619
-     center = 80.844/W0
+     r0 = dd['R0']/W0  #815.526/W0 #80.84419816935124 815.5263374281619
+     center = dd['cent']/W0 #80.844/W0
      r = np.sqrt( (xx)**2 + (zz-center)**2)
      #psi0 =  r-r0
      grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
@@ -1053,7 +1053,7 @@ elif ictype == 5: # radial initial condition
      U0[np.isnan(U0)] = U1[np.isnan(U0)]
      print('has nan in U', np.mean(np.isnan(U0)*1))     
      print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     n_theta = 120
+     n_theta = 100
 
      theta_arr = np.linspace(-pi/2,0,n_theta) 
      alpha_macro = -dd['alpha_dns']
@@ -1167,9 +1167,12 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 # must be even
 # set the arrays for QoIs
+qoi_winds = int(0.95*qoi_winds); qoi_winds = qoi_winds if qoi_winds%2 == 1 else qoi_winds+1
+print('the window size of QoI box:', qoi_winds, len_box)
+if qoi_winds <250: print('the qoi box is too small!!!!!')
 
 inter_len = np.zeros(num_box); pri_spac = np.zeros(num_box); sec_spac = np.zeros(num_box);
-fs_arr = np.zeros((len_box,num_box)); cqois = np.zeros((10,num_box));
+fs_arr = np.zeros((qoi_winds,num_box)); cqois = np.zeros((10,num_box));
 HCS = np.zeros(num_box);Kc_ave = np.zeros(num_box)
 Ttip_arr = np.zeros(num_box);
 ztip_qoi = np.zeros(num_box)
@@ -1177,8 +1180,6 @@ time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
-qoi_winds = int(0.95*qoi_winds); qoi_winds = qoi_winds if qoi_winds%2 == 1 else qoi_winds+1
-print('the window size of QoI box:', qoi_winds, len_box) 
 phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box))
 Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((qoi_winds,len_box))
 Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((qoi_winds,len_box))
