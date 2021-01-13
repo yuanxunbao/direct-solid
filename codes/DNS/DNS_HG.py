@@ -1146,7 +1146,8 @@ time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
-qoi_winds = len_box - 10
+qoi_winds = int(0.95*qoi_winds); qoi_winds = qoi_winds if qoi_winds%2 == 1 else qoi_winds+1
+print('the window size of QoI box:', qoi_winds, len_box)
 phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box)) 
 Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((qoi_winds,len_box))
 Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((qoi_winds,len_box))

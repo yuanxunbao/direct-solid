@@ -731,7 +731,8 @@ print('2d blocks per grid: ({0:2d},{1:2d})'.format(bpg2d[0], bpg2d[1]))
 print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 
 inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-qoi_winds -= 10; fs_win = qoi_winds
+qoi_winds = int(0.95*qoi_winds); qoi_winds = qoi_winds if qoi_winds%2 == 1 else qoi_winds+1
+fs_win = qoi_winds
 fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
 HCS = np.zeros(qts);Kc_ave = np.zeros(qts) 
 Ttip_arr = np.zeros(qts);
