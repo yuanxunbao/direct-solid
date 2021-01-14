@@ -919,7 +919,7 @@ def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro, phi0, 
     xB = []; zB = [];       
 
     # 1. downsampling the macrodata to select the points B. 
-    x_margin = 0.75*Len*dx; z_margin = 0.75*Len*dz
+    x_margin = 0.71*Len*dx; z_margin = 0.71*Len*dz
     xmin = x_1d[0] + x_margin;  xmax = x_1d[-1] - x_margin 
     zmin = z_1d[0] + z_margin;  zmax = z_1d[-1] - z_margin
 
@@ -1293,7 +1293,7 @@ for kt in range(int(Mt/2)):
                  Tz_cp = np.mean(T_cp, axis=1)
                  Ttip_arr[Bid] = Tz_cp[-1]
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
-                 fs_cur = smooth_fs( fs_arr[:,Bid], len_box-2 )
+                 fs_cur = smooth_fs( fs_arr[:,Bid], qoi_winds-2 )
                  bool_arr= (fs_cur>1e-2)*(fs_cur<1)
                  fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
                  HCS[Bid], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
