@@ -177,13 +177,40 @@ xmac = dd['x_dns']
 zmac = dd['y_dns']
 gradTx = dd['gradTx_ini']
 gradTy = dd['gradTy_ini']
+X_arr = dd['X_arr']
+Y_arr = dd['Y_arr']
+thetas = dd['theta']
 
+line_id = np.array([2,7,17])  # AM shallow
+#line_id = np.array([4,13,29]) # Weld shallow
 
+#line_id = np.array([4,15,28])
+line_angle = thetas[line_id]; print(line_angle)
+line_angle *= pi/180 
+line_xst = X_arr[line_id,0]; line_yst = Y_arr[line_id,0]; 
+T_interp = itp2d(xmac, zmac, T_init.T)
+
+print('target tip temperature', Ttip)
+for ii in range(len(line_id)):
+  f = lambda s : T_interp(line_xst[ii]-s*np.cos(line_angle[ii]), line_yst[ii]-s*np.sin(line_angle[ii])) - Ttip
+  dist_d = brentq(f, 0 , 100); print('dist to the tip curve',dist_d)
+  line_xst[ii] = line_xst[ii]-dist_d*np.cos(line_angle[ii])
+  line_yst[ii] = line_yst[ii]-dist_d*np.sin(line_angle[ii])
+  print('the calibrated tip temp: ',  T_interp(line_xst[ii], line_yst[ii]))
 
 xj_arr, yj_arr = get_sl_interface(T_init, xmac, zmac, xmac, Ttip)
 xj_arr = xj_arr[~np.isnan(xj_arr)]; yj_arr = yj_arr[~np.isnan(yj_arr)]
 
+print(xj_arr[0],yj_arr[0],xj_arr[-1],yj_arr[-1])
 
+cent = (yj_arr[0]**2 + xj_arr[0]**2 - yj_arr[-1]**2)/(2*(-yj_arr[-1]+yj_arr[0]))
+R0 = cent - yj_arr[-1]
+
+print('approximated by a circle: center',cent, 'radius',R0)
+print('how well the circle appoximation:')
+
+err = 1- (xj_arr**2+ (cent - yj_arr)**2)/R0**2
+print('the error', err)
 
 max_len= xmac[-1]-xmac[0]
 #extrapolate the U(r) profile to [-max_len, max_len] 
@@ -201,9 +228,9 @@ points, psi_value, U_value, psi_char, U_char = psi_dns_initial( gradTx, gradTy, 
 
 #plt.scatter(points[:,0],points[:,1])
 # append data to macrodata
-del dd['X_char']; del dd['Y_char']; del dd['psi_char']
-dd.update({'points':points,'psi_value':psi_value,'U_value':U_value})
-sio.savemat('dns1.mat',dd)
+#del dd['X_char']; del dd['Y_char']; del dd['psi_char']
+dd.update({'points':points,'psi_value':psi_value,'U_value':U_value,'line_angle':line_angle,'line_xst':line_xst,'line_yst':line_yst,'cent':cent,'R0':R0})
+sio.savemat('AM_deep.mat',dd)
 
 
 
