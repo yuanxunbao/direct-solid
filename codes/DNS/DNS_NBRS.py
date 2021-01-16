@@ -30,7 +30,7 @@ LOAD PARAMETERS
 '''
 delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0, cl_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2])
+seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2],sys.argv[4])
 
 # dimensionalize
 lxd = lx * W0
