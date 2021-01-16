@@ -1,7 +1,7 @@
-condition    Rmax(um/s)     W0(um)    domain_width(um)    dt_coeff   transient_run_W0/time_steps   interval_QoI  GPUs  Grids  time_steps
-AM_shallow     58000         8e-3           3              0.12                                      150
-AM_deep        44854          0.01          3              0.15?                                     150
-WD_shallow      1292          0.2          80              0.8              1/80000
-
+condition    Rmax(um/s)     W0(um)    domain_width(um)    dt_coeff     no.box    transient_run_W0/time_steps   interval_QoI  GPUs  Grids  time_steps
+AM_shallow     58000         8e-3           3              0.12         500               0.2/6000                150         4
+AM_deep        44854          0.01          3              0.16        1000             0.05/30000                150         16
+WD_shallow      1292          0.2          80              0.8          500               1/80000                 150         4
+WD_deep         3100          0.08         50              0.8         1000              0.4/240000               150         4
 
 
