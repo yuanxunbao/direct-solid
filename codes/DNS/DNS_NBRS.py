@@ -347,7 +347,7 @@ else: print('invalid proceesor ID occurs!')
 
 print('rank ',rank, ' x range ', x_1d[0]*W0, x_1d[-1]*W0, 'nx', nx ,'dx', dx)
 print('rank ',rank, ' z range ', z_1d[0]*W0, z_1d[-1]*W0, 'nz', nz ,'dz', dz)
-ha_wd = int(sys.argv[3])
+ha_wd = int(sys.argv[3]); hw2 = ha_wd
 
 filename = filename + 'hawd' + str(ha_wd)
 
@@ -1070,7 +1070,7 @@ elif ictype == 5: # radial initial condition
      #print('i_theta', i_theta)
      #print('alpha0', alpha0)
      #generate QoI boxes:
-     len_box = qoi_winds;
+     len_box = qoi_winds; hw1 = int( np.ceil(0.71*len_box) ); ha_wd = hw1 + hw2;
      cent = int((len_box-1)/2)
      box_per_gpu = 8
      R_max = np.max(dd['R_t'])
@@ -1117,6 +1117,7 @@ op_phi[:,[0]], conc[:,[0]], theta0[:,[0]], zz_mv[:,0] = save_data(psi_cpu, U_cpu
 
 
 # allocate space on device
+print('the shape of field variables with halos:',psi_cpu.shape)
 psi_old = cuda.to_device(psi_cpu)
 phi_old = cuda.to_device(phi_cpu)
 U_old   = cuda.to_device(U_cpu)
@@ -1228,7 +1229,7 @@ for kt in range(int(Mt/2)):
     XYT_lin_interp[bpg2d, tpb2d](x_gpu, z_gpu, t_cur, X_gpu, Z_gpu, mac_t_gpu, T_3D_gpu, T_m, alpha_3D_gpu, alpha_m )
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states, T_m, alpha_m)
     #if ha_wd==1:
-    if (2*kt+2)%ha_wd==0:
+    if (2*kt+2)%hw2==0:
       BC_421[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,alpha_m, BCsend)
       comm.Barrier()
     #  print('ready to send data', rank , time.time())
@@ -1245,7 +1246,7 @@ for kt in range(int(Mt/2)):
     XYT_lin_interp[bpg2d, tpb2d](x_gpu, z_gpu, t_cur, X_gpu, Z_gpu, mac_t_gpu, T_3D_gpu, T_m, alpha_3D_gpu, alpha_m )
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, 2*kt+1, rng_states, T_m, alpha_m)
  
-    if (2*kt+2)%ha_wd==0: #ha_wd==1 or ha_wd==2:
+    if (2*kt+2)%hw2==0: #ha_wd==1 or ha_wd==2:
       BC_421[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, alpha_m,BCsend)
       comm.Barrier()
       BC_comm(BCsend, BCrecv, nx ,nz,2*kt+2)
