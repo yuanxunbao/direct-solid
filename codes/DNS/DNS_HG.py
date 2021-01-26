@@ -41,7 +41,7 @@ l2s = -0.995
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
 filename = 'DNSalpha_comm_hg_intq150'+ (sys.argv[2])[:-4] + '_noise'+ \
-str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
+str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ '_Mt'+str(Mt)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val) 
 
 # calculate snapshot / qoi to save
@@ -347,7 +347,7 @@ else: print('invalid proceesor ID occurs!')
 
 print('rank ',rank, ' x range ', x_1d[0]*W0, x_1d[-1]*W0, 'nx', nx ,'dx', dx)
 print('rank ',rank, ' z range ', z_1d[0]*W0, z_1d[-1]*W0, 'nz', nz ,'dz', dz)
-ha_wd = int(sys.argv[3])
+ha_wd = int(sys.argv[3]); hw2 = ha_wd
 
 filename = filename + 'hawd' + str(ha_wd)
 
@@ -888,9 +888,8 @@ def box_generator(x_1d, z_1d, num_boxx, num_boxz, Len, X, Z, alpha_micro, phi0, 
 
     # 1. downsampling the macrodata to select the points B.
     x_margin = 0.71*Len*dx; z_margin = 0.71*Len*dz
-    xmin = x_1d[0] + x_margin;  xmax = x_1d[-1] - x_margin
-    zmin = z_1d[0] + z_margin;  zmax = z_1d[-1] - z_margin
-
+    xmin = max(xmin_mic + x_margin, x_1d[0]);  xmax = min(0.0 - x_margin, x_1d[-1])
+    zmin = max(zmin_mic + z_margin, z_1d[0]);  zmax = min(0.0 - z_margin, z_1d[-1])
 
    # x_in=(X>xmin)*1*(X<xmax); z_in=(Z>zmin)*1*(Z<zmax);
    # xBid = [i for i, x in enumerate( (X_arr>xmin)*1*(X_arr<xmax) ) if x]; down_samx = 1 #int( len(xBid)/num_boxx )
@@ -1022,7 +1021,7 @@ elif ictype == 5: # radial initial condition
      U0[np.isnan(U0)] = U1[np.isnan(U0)]
      print('has nan in U', np.mean(np.isnan(U0)*1))     
      print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     n_theta = 100
+     n_theta = 75
 
      theta_arr = np.linspace(-pi/2,0,n_theta) 
      alpha_macro = -dd['alpha_dns']
@@ -1036,10 +1035,13 @@ elif ictype == 5: # radial initial condition
      i_theta = (np.absolute( (pi/2+theta) /(pi/2/n_theta))).astype(int)
 
      alpha0=theta #theta_arr[i_theta-1]*(phi0>l2s)
+
+     theta_diff = np.max(theta)-np.min(theta); num_grains = int(np.ceil(theta_diff/(pi/2/n_theta)));
+     print('the no. of orientations', num_grains, 'the estimated grain size', theta_diff*r0*W0/num_grains,'um' )    
      #print('i_theta', i_theta)
      #print('alpha0', alpha0)
      #generate QoI boxes:
-     len_box = qoi_winds;
+     len_box = qoi_winds; hw1 = int( np.ceil(0.71*len_box) ); ha_wd = hw1 + hw2;
      cent = int((len_box-1)/2)
      box_per_gpu = 8
      R_max = np.max(dd['R_t'])
@@ -1086,6 +1088,7 @@ op_phi[:,[0]], conc[:,[0]], theta0[:,[0]], zz_mv[:,0] = save_data(psi_cpu, U_cpu
 
 
 # allocate space on device
+print('the shape of field variables with halos:',psi_cpu.shape)
 psi_old = cuda.to_device(psi_cpu)
 phi_old = cuda.to_device(phi_cpu)
 U_old   = cuda.to_device(U_cpu)
@@ -1146,7 +1149,7 @@ HCS = np.zeros(num_box);Kc_ave = np.zeros(num_box)
 Ttip_arr = np.zeros(num_box);
 ztip_qoi = np.zeros(num_box)
 time_qoi = np.zeros(num_box)
-tip_vel = np.zeros(num_box)
+tip_vel = np.zeros(num_box); tip_time = np.zeros(num_box)
 
 #### allocate the memory on GPU for QoIs calculation
 phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box)) 
@@ -1157,7 +1160,7 @@ alphaB_gpu = cuda.to_device(alphaB);
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
 if num_box<100: num_frame = 6*len_box 
 else: num_frame = 3*len_box
-tip_tracker_gpu = cuda.device_array([num_box,num_frame],dtype=np.int32) 
+tip_tracker_gpu = cuda.device_array([num_box,num_frame],dtype=np.int32); tip_tracker_time = cuda.device_array([num_box,num_frame])  
 tip_count = cuda.device_array(num_box,dtype=np.int32)
 tipB = cuda.device_array(num_box,dtype=np.int32)
 print_flag = True; end_qoi_flag = False
@@ -1197,7 +1200,7 @@ for kt in range(int(Mt/2)):
     XYT_lin_interp[bpg2d, tpb2d](x_gpu, z_gpu, t_cur, X_gpu, Z_gpu, mac_t_gpu, T_3D_gpu, T_m, alpha_3D_gpu, alpha_m )
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states, T_m, alpha_m)
     #if ha_wd==1:
-    if (2*kt+2)%ha_wd==0:
+    if (2*kt+2)%hw2==0:
       BC_421[bpgBC,tpb2d](psi_new, phi_new, U_old, dPSI,phi_old, BCsend)
       comm.Barrier()
     #  print('ready to send data', rank , time.time())
@@ -1214,7 +1217,7 @@ for kt in range(int(Mt/2)):
     XYT_lin_interp[bpg2d, tpb2d](x_gpu, z_gpu, t_cur, X_gpu, Z_gpu, mac_t_gpu, T_3D_gpu, T_m, alpha_3D_gpu, alpha_m )
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, 2*kt+1, rng_states, T_m, alpha_m)
  
-    if (2*kt+2)%ha_wd==0: #ha_wd==1 or ha_wd==2:
+    if (2*kt+2)%hw2==0: #ha_wd==1 or ha_wd==2:
       BC_421[bpgBC,tpb2d](psi_old,phi_old,U_new, dPSI, phi_new,BCsend)
       comm.Barrier()
       BC_comm(BCsend, BCrecv, nx ,nz,2*kt+2)
@@ -1243,21 +1246,21 @@ for kt in range(int(Mt/2)):
               if tip_count[Bid] < num_frame:
                  if tip_count[Bid]==0 and cur_tip>cent: print('got tip position larger than the center initially !!!');
                  if tip_count[Bid]==1 and cur_tip==tip_tracker_gpu[Bid,0]: tip_count[Bid]=1       
-                 else: tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_count[Bid] +=1; \
+                 else: tip_tracker_gpu[Bid,tip_count[Bid]] = cur_tip; tip_tracker_time[Bid,tip_count[Bid]] = (2*kt+2)*dt*tau0; tip_count[Bid] +=1; \
                        print('the current tip position ', cur_tip, ' in the box no.', Bid, 'rank', rank)
               if cur_tip>len_box-5: 
                  print('the box no.', Bid, 'in rank',rank,' turn off and transfer data to cpu, current tip', cur_tip )
                  phi_cp = (phiw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
                  U_cp  = (Uw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
                  T_cp = (Tw.copy_to_host().T)[cur_tip-qoi_winds:cur_tip,:]
-                 tip_cp = tip_tracker_gpu[Bid,:].copy_to_host()
+                 tip_cp = tip_tracker_gpu[Bid,:].copy_to_host(); tip_time_cp = tip_tracker_time[Bid,:].copy_to_host();time_itp = interp1d(tip_cp,tip_time_cp)
                  c_cp = c_inf*( 1+ (1-k)*U_cp )*( k*(1+phi_cp)/2 + (1-phi_cp)/2 ) / ( 1+ (1-k)*U_0 )
                  ## and the relavent QoI calculations
                  cp_cpu_flag[Bid] =1
                  inter_len[Bid] = interf_len(phi_cp,W0)
                  pri_spac[Bid], sec_spac[Bid] = spacings(phi_cp, cur_tip, (len_box-1)*dx*W0, dxd, mph)
                  tip_cp = tip_cp[tip_cp>0.5]; vel_arr = np.diff(tip_cp)*dx*W0/(interq*dt*tau0);vel_itp = interp1d(tip_cp[:-1],vel_arr) 
-                 tip_vel[Bid] = vel_itp(cent);#print('velocity distribution',vel_arr)
+                 tip_vel[Bid] = vel_itp(cent);tip_time[Bid] = time_itp(cent)#print('velocity distribution',vel_arr)
                  cqois[:,Bid] = conc_var(phi_cp,c_cp) 
                  Tz_cp = np.mean(T_cp, axis=1)
                  Ttip_arr[Bid] = Tz_cp[-1]
@@ -1296,7 +1299,7 @@ if num_box!=0:
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB,\
   'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
-'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'Ttip':Ttip_arr,'fs_arr':fs_arr} )
+'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'tip_time':tip_time,'Ttip':Ttip_arr,'fs_arr':fs_arr} )
 else:
 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
