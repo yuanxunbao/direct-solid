@@ -53,7 +53,7 @@ def phys_para():
 
     return delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m, G, R, Ti, U_0, cl0
   
-def simu_para(W0,Dl_tilde, tau0, macrodata):
+def simu_para(W0,Dl_tilde, tau0, macrodata, seed):
 
     dd = sio.loadmat(macrodata,squeeze_me=True)
     xmin_mic = -960/W0 #dd['x_dns'][0]*0.85/W0*0.8
@@ -75,8 +75,8 @@ def simu_para(W0,Dl_tilde, tau0, macrodata):
     Mt = 2*np.ceil( tend/2/dt ) # total  number of time steps (even number)
     dt = tend/Mt 
     eta = 0.04 #0.04               		# magnitude of noise
-    #Mt = 100
-    seed_val = 1 # np.uint64(np.random.randint(1,1000))
+    #Mt = 10000
+    seed_val = int(seed) ; print(seed_val) # np.uint64(np.random.randint(1,1000))
     #U0 = -0.3                		# initial value for U, -1 < U0 < 0
     nts = 20 				# number snapshots to save, Mt/nts must be int
     mv_flag = False			# moving frame flag
