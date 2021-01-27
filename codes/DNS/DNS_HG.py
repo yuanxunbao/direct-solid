@@ -40,7 +40,7 @@ l2s = -0.995
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'DNSalpha_comm_hg_intq150'+ (sys.argv[2])[:-4] + '_noise'+ \
+filename = 'DNSalpha_fix_hg_intq150'+ (sys.argv[2])[:-4] + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ '_Mt'+str(Mt)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val) 
 

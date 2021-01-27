@@ -71,16 +71,49 @@ def psi_dns_initial( gradTx, gradTy, x,y, X,Y, max_len, Uitp ):
         nhat_x[j] = vx / vn
         nhat_y[j] = vy / vn
         
-        
-    # extend the interface beyond the left boundary
-    hx = x[1] - x[0]
-    npts_ext = int(  (X[0] - x[0])/ hx )
-    x_ext = np.linspace( x[0] , X[0], npts_ext )
-    
-    
-    f_sl = itp1d(X, Y, fill_value='extrapolate')
-    y_ext = f_sl( x_ext )
-    
+# LEFT EXTENSTION
+    ds = np.sqrt( (X[0]-X[1])**2 + (Y[0]-Y[1])**2 )
+    u = (X[0]-X[1]) / ds
+    v = (Y[0]-Y[1]) / ds
+
+    npts_ext = int(  (X[0] - x[0])/ ds )
+    print('number of extension points = %d'%(npts_ext))
+
+    x_ext = np.zeros(npts_ext)
+    y_ext = np.zeros(npts_ext)
+    for k in range(npts_ext):
+
+        x_ext[k] = X[0] + u * ds * k
+        y_ext[k] = Y[0] + v * ds * k    
+
+    # compute normal of extended interface
+    nhat_x_ext = y_ext[1:] - y_ext[:-1]
+    nhat_y_ext = -x_ext[1:] + x_ext[:-1]
+    n2_ext = np.sqrt( nhat_x_ext**2 + nhat_y_ext**2 )
+    nhat_x_ext = nhat_x_ext / n2_ext
+    nhat_y_ext = nhat_y_ext / n2_ext
+
+
+    # append extended interface with original 
+    X = np.append(x_ext[1:], X)
+    Y = np.append(y_ext[1:], Y)
+    nhat_x = np.append(nhat_x_ext, nhat_x )
+    nhat_y = np.append(nhat_y_ext, nhat_y)
+
+
+    ## RIGHT EXTENSION
+    ds = np.sqrt( (X[-1]-X[-2])**2 + (Y[-1]-Y[-2])**2 )
+    u = (X[-1]-X[-2]) / ds
+    v = (Y[-1]-Y[-2]) / ds
+
+
+    x_ext = np.zeros(npts_ext)
+    y_ext = np.zeros(npts_ext)
+    for k in range(npts_ext):
+
+        x_ext[k] = X[-1] + u * ds * k
+        y_ext[k] = Y[-1] + v * ds * k    
+
     # compute normal of extended interface
     nhat_x_ext = -y_ext[1:] + y_ext[:-1]
     nhat_y_ext =  x_ext[1:] - x_ext[:-1]
@@ -88,15 +121,18 @@ def psi_dns_initial( gradTx, gradTy, x,y, X,Y, max_len, Uitp ):
     nhat_x_ext = nhat_x_ext / n2_ext
     nhat_y_ext = nhat_y_ext / n2_ext
 
-                
+
     # append extended interface with original 
-    X = np.append(x_ext[:-1], X)
-    Y = np.append(y_ext[:-1], Y)
-    nhat_x = np.append(nhat_x_ext, nhat_x )
-    nhat_y = np.append(nhat_y_ext, nhat_y)
-    
-    
-    ds = x[1]-x[0]
+    X = np.append(X, x_ext[1:])
+    Y = np.append(Y, y_ext[1:])
+    nhat_x = np.append( nhat_x , nhat_x_ext)
+    nhat_y = np.append( nhat_y , nhat_y_ext)
+
+
+
+    # characteristics step size
+    ds =  np.sqrt( ( x[1]-x[0] )**2 + ( y[1] - y[0] )**2)
+        
     nstep = int(max_len / ds)
     
     
@@ -181,10 +217,10 @@ X_arr = dd['X_arr']
 Y_arr = dd['Y_arr']
 thetas = dd['theta']
 
-line_id = np.array([2,7,17])  # AM shallow
-#line_id = np.array([4,13,29]) # Weld shallow
-
-#line_id = np.array([4,15,28])
+#line_id = np.array([2,7,17])  # AM shallow
+line_id = np.array([4,9,15]) # Weld shallow
+#line_id = np.array([4,19,27])
+#line_id = np.array([4,16,26])  # weld deep
 line_angle = thetas[line_id]; print(line_angle)
 line_angle *= pi/180 
 line_xst = X_arr[line_id,0]; line_yst = Y_arr[line_id,0]; 
@@ -229,8 +265,16 @@ points, psi_value, U_value, psi_char, U_char = psi_dns_initial( gradTx, gradTy, 
 #plt.scatter(points[:,0],points[:,1])
 # append data to macrodata
 #del dd['X_char']; del dd['Y_char']; del dd['psi_char']
-dd.update({'points':points,'psi_value':psi_value,'U_value':U_value,'line_angle':line_angle,'line_xst':line_xst,'line_yst':line_yst,'cent':cent,'R0':R0})
-sio.savemat('AM_deep.mat',dd)
+Xlines = dd['X_arr'][line_id,:]
+Ylines = dd['Y_arr'][line_id,:]    # further, we can plot the lines with length at any time
+
+lens = dd['dist_arr'][line_id,-1]
+add_dist = np.sqrt( (Xlines[:,0]-line_xst)**2 + (Ylines[:,0]-line_yst)**2)
+lens += add_dist
+
+dd.update({'points':points,'psi_value':psi_value,'U_value':U_value,'line_angle':line_angle,'line_xst':line_xst,'line_yst':line_yst,\
+'cent':cent,'R0':R0,'line_id':line_id,'add_dist':add_dist,'lens':lens})
+sio.savemat('WD_shallow.mat',dd)
 
 
 

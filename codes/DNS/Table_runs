@@ -1,7 +1,23 @@
-condition    Rmax(um/s)     W0(um)    domain_width(um)    dt_coeff     no.box    transient_run_W0/time_steps   interval_QoI  GPUs      line_id     angle    Grids  time_steps
-AM_shallow     58000         8e-3           3              0.12         500               0.2/6000                150         4         2,7,17     
-AM_deep        44854          0.01          4              0.12        1000             0.05/30000                150         16        4,19,27
-WD_shallow      1292          0.2          80              0.8          500               1/80000                 150         4         4,9,15
-WD_deep         3100          0.08         50              0.8         1000              0.4/240000               150         4         4,16,26
+# physical paramter
 
+condition    Rmax(um/s)     W0(um)     grain_size(um)    
+AM_shallow     58000         8e-3       
+AM_deep        44854          0.01         
+WD_shallow      1292          0.2           20
+WD_deep         3100          0.08          20 
 
+# line model and transient
+
+	    domain_width(um)   dt_coeff       line_id      angles    Grids   aspect-ratio transient_run_W0/time_steps
+		  3              0.12          2,7,17
+		  4              0.12          4,19,27
+		  80              0.8          4,9,15
+		  60              0.8          4,16,26
+
+# DNS simulation parameter
+
+		 no.box     interval_QoI     GPUs     Grids    time steps 
+	          500             150         4     
+	 	  1000            150         16   
+		  500             150         4   
+		  1000            150         4  
