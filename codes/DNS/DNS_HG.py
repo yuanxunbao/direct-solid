@@ -1237,7 +1237,7 @@ for kt in range(int(Mt/2)):
             #if phi_old[nx0-10,nz0-10]>l2s or phi_old[nx0,nz0-10]>l2s or phi_old[nx0-10,nz0]>l2s: 
            if U_old[nx0-cent,nz0-cent]> l2s : #or phi_old[nx0,nz0-cent]>l2s or phi_old[nx0-cent,nz0]>l2s:  
              #print('rank',rank,'box id', Bid)
-              if alpha_m[nx0-cent,nz0-cent]<-1e-15: alphaB_gpu[Bid]=alpha_m[nx0-cent,nz0-cent] 
+              #if alpha_m[nx0-cent,nz0-cent]<-1e-15: alphaB_gpu[Bid]=alpha_m[nx0-cent,nz0-cent] 
               rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, Tw, phi_old, U_old, T_m )
                
              # print('the tip poisition stored right now',tipB[Bid]) 
