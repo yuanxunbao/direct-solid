@@ -30,7 +30,7 @@ LOAD PARAMETERS
 '''
 delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0, cl_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2], sys.argv[4])
+seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx,num_theta= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2], sys.argv[4])
 
 # dimensionalize
 lxd = lx * W0
@@ -1008,8 +1008,8 @@ elif ictype == 5: # radial initial condition
      #grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
      #print('the introduced source term',np.max(1-grad2))
      #print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     r0 = 815.526/W0 #80.84419816935124 815.5263374281619
-     center = 80.844/W0
+     r0 = dd['R0']/W0  #815.526/W0 #80.84419816935124 815.5263374281619
+     center = dd['cent']/W0 #80.844/W0
      r = np.sqrt( (xx)**2 + (zz-center)**2)
      #psi0 =  r-r0
      grad2 = ((psi0[2:,1:-1]-psi0[:-2,1:-1])**2+(psi0[1:-1,2:]-psi0[1:-1,:-2])**2)/4/(dx)**2
@@ -1021,7 +1021,7 @@ elif ictype == 5: # radial initial condition
      U0[np.isnan(U0)] = U1[np.isnan(U0)]
      print('has nan in U', np.mean(np.isnan(U0)*1))     
      print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     n_theta = 75
+     n_theta = num_theta
 
      theta_arr = np.linspace(-pi/2,0,n_theta) 
      alpha_macro = -dd['alpha_dns']
@@ -1151,10 +1151,14 @@ ztip_qoi = np.zeros(num_box)
 time_qoi = np.zeros(num_box)
 tip_vel = np.zeros(num_box); tip_time = np.zeros(num_box)
 
+T_line = np.zeros((qoi_winds,num_box)); c_line = np.zeros((len_box,num_box)); record_c_flag = cuda.device_array(num_box,dtype=np.int32) 
+U_arr = np.zeros((len_box,num_box));phi_arr = np.zeros((len_box,num_box));
+
 #### allocate the memory on GPU for QoIs calculation
 phiw = cuda.device_array([len_box,len_box],dtype=np.float64); phi_cp=np.zeros((qoi_winds,len_box)) 
 Uw   = cuda.device_array([len_box,len_box],dtype=np.float64); c_cp=np.zeros((qoi_winds,len_box))
 Tw   = cuda.device_array([len_box,len_box],dtype=np.float64); T_cp=np.zeros((qoi_winds,len_box))
+U_line_gpu = cuda.device_array([len_box,num_box],dtype=np.float64);phi_line_gpu = cuda.device_array([len_box,num_box],dtype=np.float64);
 xB_gpu = cuda.to_device(xB); zB_gpu = cuda.to_device(zB)
 alphaB_gpu = cuda.to_device(alphaB); 
 cp_cpu_flag = cuda.device_array(num_box,dtype=np.int32)
@@ -1187,9 +1191,8 @@ start = time.time()
 for kt in range(int(Mt/2)):
 #    psi_ch=psi_old.copy_to_host()[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1];print('rank',rank,psi_ch)
  #   if np.mean(np.isnan(psi_ch)*1)>0.0: print('time',kt*2); print(np.argwhere(np.isnan(psi_ch)));print('rank',rank,'blow',psi_ch[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1]);sys.exit(1) 
-    if math.isnan(psi_old[-ha_wd-1,-ha_wd-1])==True: 
-        print('rank',rank,'blow up');# psi_ch=psi_old.copy_to_host()
-   #     sio.savemat('check_blowup.mat',{'psi':psi_ch})
+    #if math.isnan(psi_old[-ha_wd-1,-ha_wd-1])==True: 
+    #    print('rank',rank,'blow up');# psi_ch=psi_old.copy_to_host()
   #      print(psi_ch[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1]);print('time',kt*2);sys.exit(1)
         #psi=psi_old.copy_to_host()
         #print(psi[ha_wd:-ha_wd,ha_wd:-ha_wd]);#sys.exit(1)
@@ -1241,7 +1244,10 @@ for kt in range(int(Mt/2)):
               rotate[bpg2d, tpb2d]( Bid, len_box, nx0, nz0, alphaB_gpu, phiw, Uw, Tw, phi_old, U_old, T_m )
                
              # print('the tip poisition stored right now',tipB[Bid]) 
-              cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw) 
+              cur_tip_x, cur_tip= compute_tip_pos(tipB[Bid], sum_arr, phiw)
+              if cur_tip>= cent and record_c_flag[Bid]==0: 
+                      U_line_gpu[:,Bid] = Uw[cur_tip_x,:]; phi_line_gpu[:,Bid] = phiw[cur_tip_x,:];
+                      record_c_flag[Bid]=1  
               tipB[Bid] = cur_tip; 
               if tip_count[Bid] < num_frame:
                  if tip_count[Bid]==0 and cur_tip>cent: print('got tip position larger than the center initially !!!');
@@ -1262,7 +1268,7 @@ for kt in range(int(Mt/2)):
                  tip_cp = tip_cp[tip_cp>0.5]; vel_arr = np.diff(tip_cp)*dx*W0/(interq*dt*tau0);vel_itp = interp1d(tip_cp[:-1],vel_arr) 
                  tip_vel[Bid] = vel_itp(cent);tip_time[Bid] = time_itp(cent)#print('velocity distribution',vel_arr)
                  cqois[:,Bid] = conc_var(phi_cp,c_cp) 
-                 Tz_cp = np.mean(T_cp, axis=1)
+                 Tz_cp = np.mean(T_cp, axis=1); T_line[:,Bid] = Tz_cp
                  Ttip_arr[Bid] = Tz_cp[-1]
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
                  fs_cur = smooth_fs( fs_arr[:,Bid], qoi_winds-2 )
@@ -1289,17 +1295,22 @@ for kt in range(int(Mt/2)):
 
        t_snapshot[kk] = 2*(kt+1)*dt
 
+
+end = time.time()
+print('elapsed time: ', (end-start))
+
 tip_boxes = tip_tracker_gpu.copy_to_host()
 Tf = T_m.copy_to_host()
 af = alpha_m.copy_to_host()
-end = time.time()
-print('elapsed time: ', (end-start))
+U_arr = U_line_gpu.copy_to_host()
+phi_arr = phi_line_gpu.copy_to_host()
+c_line = c_inf*( 1+ (1-k)*U_arr )*( k*(1+phi_arr)/2 + (1-phi_arr)/2 ) / ( 1+ (1-k)*U_0 ) 
 
 if num_box!=0: 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\
   'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'t_snapshot':t_snapshot*tau0,'xB':x_1d[xB]*W0,'zB':z_1d[zB]*W0,'alphaB':alphaB,\
   'num_box':num_box,'phi_win':phi_cp,'c_win':c_cp,'T_win':T_cp,'tip_boxes':tip_boxes,'interf_len':inter_len,'pri_spac':pri_spac,'sec_spac':sec_spac,'HCS':HCS,\
-'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'tip_time':tip_time,'Ttip':Ttip_arr,'fs_arr':fs_arr} )
+'Kc_ave':Kc_ave,'cqois':cqois,'tip_vel':tip_vel,'tip_time':tip_time,'Ttip':Ttip_arr,'fs_arr':fs_arr,'U_arr':U_arr,'phi_arr':phi_arr,'T_line':T_line,'c_line':c_line} )
 else:
 
   save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'theta0':theta0, 'x':x_1d*W0, 'z':z_1d*W0,'dt':dt*tau0,\

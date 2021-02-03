@@ -30,7 +30,7 @@ LOAD PARAMETERS
 '''
 delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_inf, m_slope, G, R, Ti, U_0, cl_0 = PARA.phys_para()
 eps, alpha0, lx, aratio, nx, dt, Mt, eta, \
-seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2],sys.argv[4])
+seed_val, nts,direc, mvf, tip_thres, ictype, qts,qoi_winds ,xmin_mic,zmin_mic,dx,num_theta= PARA.simu_para(W0,Dl_tilde,tau0,sys.argv[2],sys.argv[4])
 
 # dimensionalize
 lxd = lx * W0
@@ -1052,7 +1052,7 @@ elif ictype == 5: # radial initial condition
      U0[np.isnan(U0)] = U1[np.isnan(U0)]
      print('has nan in U', np.mean(np.isnan(U0)*1))     
      print('has nan in psi', np.mean(np.isnan(psi0)*1))
-     n_theta = 75
+     n_theta = num_theta
 
      theta_arr = np.linspace(-pi/2,0,n_theta) 
      alpha_macro = -dd['alpha_dns']
@@ -1220,9 +1220,8 @@ start = time.time()
 for kt in range(int(Mt/2)):
 #    psi_ch=psi_old.copy_to_host()[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1];print('rank',rank,psi_ch)
  #   if np.mean(np.isnan(psi_ch)*1)>0.0: print('time',kt*2); print(np.argwhere(np.isnan(psi_ch)));print('rank',rank,'blow',psi_ch[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1]);sys.exit(1) 
-    if math.isnan(psi_old[-ha_wd-1,-ha_wd-1])==True: 
-        print('rank',rank,'blow up');# psi_ch=psi_old.copy_to_host()
-   #     sio.savemat('check_blowup.mat',{'psi':psi_ch})
+   # if math.isnan(psi_old[-ha_wd-1,-ha_wd-1])==True: 
+   #     print('rank',rank,'blow up');# psi_ch=psi_old.copy_to_host()
   #      print(psi_ch[ha_wd-1:-ha_wd+1,ha_wd-1:-ha_wd+1]);print('time',kt*2);sys.exit(1)
         #psi=psi_old.copy_to_host()
         #print(psi[ha_wd:-ha_wd,ha_wd:-ha_wd]);#sys.exit(1)
