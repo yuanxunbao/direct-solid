@@ -2,8 +2,8 @@
 
 condition    Rmax(um/s)     W0(um)     grain_size(um)    
 AM_shallow     58000         8e-3       
-AM_deep        44854          0.01         
-WD_shallow      1292          0.2           20
+AM_deep        44854        1.05e-2         
+WD_shallow      1292          0.14          20
 WD_deep         3100          0.08          20 
 
 # line model and transient
