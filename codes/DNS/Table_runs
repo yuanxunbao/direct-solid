@@ -1,8 +1,8 @@
 # physical paramter
 
-condition    Rmax(um/s)     W0(um)     grain_size(um)    
-AM_shallow     58000         8e-3       
-AM_deep        44854        1.05e-2         
+condition    Rmax(um/s)     W0(um)     initial_grain_size(um)    
+AM_shallow     58000         8e-3           1 
+AM_deep        44854        1.05e-2         1
 WD_shallow      1292          0.14          20
 WD_deep         3100          0.08          20 
 
@@ -10,9 +10,9 @@ WD_deep         3100          0.08          20
 
 	    domain_width(um)   dt_coeff       line_id      angles    Grids   aspect-ratio transient_run_W0/time_steps
 		  3              0.12          2,9,17                             4              0.2/6000 
-		  4              0.12          4,15,27						 0.05/20000
-		  80              0.8          2,7,12						 1/60000
-		  60              0.8          4,16,26
+		  4              0.12          4,15,27				  4		 0.05/20000
+		  80              0.8          2,7,12				  4		 1/60000
+		  60              0.8          4,16,26				  4
 
 # DNS simulation parameter
 

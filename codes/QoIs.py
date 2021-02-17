@@ -270,18 +270,16 @@ def smooth_fs(fs,winds):
     return fs
 
 
-
 def Kou_HCS(fs, Tz):   # input interval of temperature level sets
-    
+
+    while (~((fs[:-1]-fs[1:])>5e-5).all()):
+         fs = savgol_filter(fs, 101, 1)
     sq_fs = np.sqrt(fs)
 #    dTdfsh = (Tz[2:] - Tz[:-2] )/(sq_fs[2:]-sq_fs[:-2])
-    dTdfsh = (Tz[1:] - Tz[:-1] )/(sq_fs[1:]-sq_fs[:-1])   
-   # HCS_K_arr = np.absolute( dTdfsh )
-   #  HCS_K = np.amax( HCS_K_arr )
+    dTdfsh = (Tz[1:]-Tz[:-1])/(sq_fs[1:]-sq_fs[:-1])
     HCS_K = np.linalg.norm(dTdfsh,np.inf)
-	
 
-    return HCS_K, dTdfsh  #a number
+    return HCS_K, dTdfsh
 
 
 def permeability(fs,lamd, mph):#lambda here is primary spacing
