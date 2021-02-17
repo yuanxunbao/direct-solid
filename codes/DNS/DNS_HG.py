@@ -1047,7 +1047,7 @@ elif ictype == 5: # radial initial condition
      R_max = np.max(dd['R_t'])
      delta_box = len_box*(dx*W0)
      Mt_box= delta_box/R_max/(tau0*dt)
-     interq = int(Mt_box/150)
+     interq = int(Mt_box/150)  ## 150 is chosen by experimentation to reduce the time for QoI computing
      interq = interq if interq%2==0 else interq-1
      if rank==0: print('length',delta_box,'the shortest time step to pass the box', Mt_box, 'time interval', interq)  
      num_box, xB, zB, alphaB = box_generator(x_1d, z_1d, box_per_gpu, box_per_gpu, len_box, X_cpu, Z_cpu, theta, phi0, U0)  
@@ -1271,11 +1271,12 @@ for kt in range(int(Mt/2)):
                  Tz_cp = np.mean(T_cp, axis=1); T_line[:,Bid] = Tz_cp
                  Ttip_arr[Bid] = Tz_cp[-1]
                  fs_arr[:, Bid] = solid_frac(phi_cp,  821, Tz_cp)
-                 fs_cur = smooth_fs( fs_arr[:,Bid], qoi_winds-2 )
-                 bool_arr= (fs_cur>1e-2)*(fs_cur<1)
-                 fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
-                 HCS[Bid], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
-                 Kc_ave[Bid] = np.mean( permeability(fs_cur,pri_spac[Bid], mph) )
+                 #fs_cur = smooth_fs( fs_arr[:,Bid], qoi_winds-2 )
+                 #bool_arr= (fs_cur>1e-2)*(fs_cur<1)
+                 #fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
+                 if np.mean(fs_arr[:,Bid]) > 1e-12:
+                   HCS[Bid], HCS_arr = Kou_HCS(fs_arr[:,Bid], Tz_cp)
+                   Kc_ave[Bid] = np.mean( permeability(fs_arr[:,Bid],pri_spac[Bid], mph) )
                  
 
     if sum(cp_cpu_flag)==num_box and print_flag==True: 
