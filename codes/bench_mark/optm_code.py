@@ -5,7 +5,7 @@ this code is optimized version of dirsolid_cuda_dp.py
 Optimization ways:
 1. [done] single precision
 2. shared memory/tiling/coelsing
-3. optimize kernel calls/ threads per block
+3. [done] optimize kernel calls/ threads per block
 4. [done] optimize register by tmp variable
 
 @author: yigong qin, yuanxun bao
