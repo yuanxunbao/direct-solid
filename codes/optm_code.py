@@ -99,6 +99,7 @@ dz = float64( lz/(nz-1) )
 x_1d = (np.linspace(0,lx-dx,nx)).astype(np.float64)
 z_1d = (np.linspace(0,lz,nz)).astype(np.float64)
 zz,xx = np.meshgrid(z_1d, x_1d)
+print('mesh data type',type(zz) )
 
 dxdz_in = float64( 1./(dx*dz) ) 
 dxdz_in_sqrt = float64( np.sqrt(dxdz_in) )
@@ -107,7 +108,7 @@ hi= float64( 1./dx )
 
 dt_sqrt =  float64( np.sqrt(dt) )
 
-dxd = dx*W0
+dxd = float64( dx*W0 )
 
 print('==========================================\n')
 print('W0 = %4.2E um'% W0)
@@ -130,11 +131,6 @@ conc = np.zeros((nv,nts+1), dtype=np.float64)
 zz_mv = np.zeros((nz,nts+1), dtype=np.float64)
 t_snapshot = np.zeros(nts+1, dtype=np.float64)
 
-op_psi_1d = np.zeros((nz,nts+1), dtype=np.float64)
-op_phi_1d = np.zeros((nz,nts+1), dtype=np.float64)
-Uc_1d = np.zeros((nz,nts+1), dtype=np.float64)
-conc_1d = np.zeros((nz,nts+1), dtype=np.float64)
-z_1d = np.zeros((nz,nts+1), dtype=np.float64)
 '''
 -------------------------------------------------------------------------------------------------
 INIT. TIP POSITION
@@ -661,13 +657,6 @@ print('(threads per block, block per grid) = ({0:2d},{1:2d})'.format(tpb, bpg))
 kts = int( 2*np.floor((Mt/nts)/2) ); # print(kts)
 interq = int( 2*np.floor(Mt/qts/2) ); # print(interq)
 
-inter_len = np.zeros(qts); pri_spac = np.zeros(qts); sec_spac = np.zeros(qts);
-fs_win = qoi_winds
-fs_arr = np.zeros((fs_win,qts)); ztip_arr = np.zeros(qts);cqois = np.zeros((10,qts));
-HCS = np.zeros(qts);Kc_ave = np.zeros(qts)
-Ttip_arr = np.zeros(qts);
-tip_uq = np.zeros(qts);
-alpha_arr = np.zeros((nz,qts));
 start = time.time()
 
 # march two steps per loop
