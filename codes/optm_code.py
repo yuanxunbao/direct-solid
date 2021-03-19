@@ -4,11 +4,10 @@
 this code is optimized version of dirsolid_cuda_dp.py
 Optimization ways:
 1. single precision
-2. shared memory
+2. shared memory/tiling/coelsing
 3. optimize kernel calls
 4. threads per block
-5. optimize register by tmp variable
-6. tiling  
+5. [done] optimize register by tmp variable
 
 @author: yigong qin, yuanxun bao
 """
@@ -626,10 +625,6 @@ psi_cpu = psi.astype(np.float64)
 # save initial data
 op_phi[:,[0]], conc[:,[0]], zz_mv[:,0] = save_data(phi_cpu, U_cpu, z_cpu )
 
-op_psi_1d[:,0], op_phi_1d[:,0], Uc_1d[:,0], conc_1d[:,0], z_1d[:,0] = save_data_transient(psi_cpu, phi_cpu, U_cpu, z_cpu)
-
-
-
 # allocate space on device
 psi_old = cuda.to_device(psi_cpu)
 phi_old = cuda.to_device(phi_cpu)
@@ -675,11 +670,6 @@ tip_uq = np.zeros(qts);
 alpha_arr = np.zeros((nz,qts));
 start = time.time()
 
-# array holds tip z-coord
-ztip_qoi = np.zeros(qts)
-time_qoi = np.zeros(qts)
-tip_vel = np.zeros(qts)
-
 # march two steps per loop
 for kt in range(int(Mt/2)):
    
@@ -719,38 +709,6 @@ for kt in range(int(Mt/2)):
            cur_tip = cur_tip-1
     cur_tip_x, cur_tip= compute_tip_pos(cur_tip, sum_arr, phi_old)
 
-    if (2*kt+2)%interq ==0:
-        kqs = int(np.floor((2*kt+2)/interq))-1
-        time_qoi[kqs] = (2*kt+2)*dt*tau0      # in seconds
-        z_cpu = z_gpu.copy_to_host()
-        ztip_qoi[kqs] = z_cpu[cur_tip]*W0     # in um
-       # print('z-cpu',z_cpu)
-        Tz_cur = Ti + G*(z_cpu*W0 - R*time_qoi[kqs])
-       # print(Tz_cur.shape)
-        Ttip_arr[kqs] = Tz_cur[cur_tip]
-        phi = phi_old.copy_to_host().T
-        if cur_tip>qoi_winds: phi_cp = phi[cur_tip-qoi_winds:cur_tip,:]
-        else: phi_cp = phi[:cur_tip,:]
-        inter_len[kqs] = interf_len(phi_cp,W0)
-        pri_spac[kqs], sec_spac[kqs] = spacings(phi_cp, cur_tip, lxd, dxd, mph)
-        fsc=0
-        if cur_tip>fs_win+fsc:
-                phi_fs = phi[cur_tip-fsc-fs_win:cur_tip-fsc,:]
-                Tz_cp = Tz_cur[cur_tip-fsc-fs_win:cur_tip-fsc]
-                fs_arr[:,kqs] = solid_frac(phi_fs,  821, Tz_cp)
-                fs_cur = smooth_fs( fs_arr[:,kqs], fs_win-1 )
-                bool_arr= (fs_cur>1e-2)*(fs_cur<1)
-                fs_cur = fs_cur[bool_arr]; Tz_cp = Tz_cp[bool_arr]
-                #fs_cur = fs_cur[fs_cur>1e-2]; fs_cur = fs_cur[fs_cur<1]
-                HCS[kqs], HCS_arr = Kou_HCS(fs_cur, Tz_cp)
-                Kc = permeability(fs_cur,pri_spac[kqs], mph)
-                Kc_ave[kqs] = np.mean(Kc)
-        #fs_arr = np.vstack(( fs_arr, fs ))
-        U  = U_old.copy_to_host().T
-        cnc = c_inf* ( 1+ (1-k)*U )*( k*(1+phi)/2 + (1-phi)/2 ) / ( 1+ (1-k)*U_0 )
-        if cur_tip>qoi_winds: cnc_cp = cnc[cur_tip-qoi_winds:cur_tip,:]
-        else: cnc_cp = cnc[:cur_tip,:]
-        cqois[:,kqs] = conc_var(phi_cp,cnc_cp)
     # print & save data 
     if (2*kt+2)%kts==0:
        
@@ -761,12 +719,8 @@ for kt in range(int(Mt/2)):
        kk = int(np.floor((2*kt+2)/kts))
        phi = phi_old.copy_to_host()
        U  = U_old.copy_to_host()
-       psi = psi_old.copy_to_host()
        z_cpu = z_gpu.copy_to_host()
-       # print(zz_cpu.shape)
-       # Ttip_arr[kk] = Ti + G*( zz_cpu[3,cur_tip]*W0 - R*(2*nt+2)*dt*tau0 ) 
        op_phi[:,[kk]], conc[:,[kk]], zz_mv[:,kk] = save_data(phi,U,z_cpu)       
-       op_psi_1d[:,kk],op_phi_1d[:,kk], Uc_1d[:,kk],conc_1d[:,kk], z_1d[:,kk] = save_data_transient(psi, phi, U, z_cpu)
 
        t_snapshot[kk] = 2*(kt+1)*dt 
 
@@ -774,50 +728,7 @@ for kt in range(int(Mt/2)):
 end = time.time()
 print('elapsed time: ', (end-start))
 
-if len(sys.argv)==3:
-     print('the data of transient run')
-     macrodata = sys.argv[2]
-     GRt_data = sio.loadmat(macrodata)
-     ztipt = z_1d[cur_tip,-1]*W0 - R*Mt*dt*tau0
-     Ttipt = Ti + G*ztipt; print('Tip temperature', Ttipt, 'K')
-     cutid = cur_tip
-     while op_phi_1d[cutid,-1]<0.999: cutid -=1
-     op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
-     conc_1d = conc_1d[cutid:,:]; print('cmax', np.max(conc_1d[:,-1])); Uc_1d = Uc_1d[cutid:,:]; print('Umax', np.max(Uc_1d[:,-1]))
-     grid_diff = int(5/W0/dx); #print('Udiff', Uc_1d[cur_tip-cutid+grid_diff,-1])
-     z_1d = z_1d[cutid:,:];        
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0-R*Mt*dt*tau0,'trans_tip':cur_tip-cutid,'Ttip':Ttipt,\
-'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0})   # append
-     sio.savemat(macrodata, GRt_data)
-if len(sys.argv)==4:
-     macrodata = sys.argv[2]
-     GRt_data = sio.loadmat(macrodata)
-     ztipt = z_1d[cur_tip,-1]*W0
-     Ttipt = Ti + G*ztipt
-     #cutid = 0
-     cutid = cur_tip
-     while op_phi_1d[cutid,-1]<0.999: cutid -=1
-     op_psi_1d = op_psi_1d[cutid:,:];op_phi_1d = op_phi_1d[cutid:,:];
-     conc_1d = conc_1d[cutid:,:];Uc_1d = Uc_1d[cutid:,:];
-     z_1d = z_1d[cutid:,:];
-     GRt_data.update({'op_psi_1d':op_psi_1d,'op_phi_1d':op_phi_1d,'Uc_1d':Uc_1d,'conc_1d':conc_1d,'z_1d':z_1d*W0,'trans_tip':cur_tip,'Ttip':Ttipt,\
-'ztip':ztipt,'time_tr':Mt*dt,'time_trd':Mt*dt*tau0,'ztip_arr':ztip_qoi,'time_qoi':time_qoi})   # append
-     sio.savemat('TID'+sys.argv[3]+macrodata, GRt_data)
-# save(os.path.join(direc,filename+'.mat'),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
-# 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start} )
 
 save(os.path.join(direc,filename+'.mat'),{'op_phi':op_phi, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
  'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start, 't_snapshot':t_snapshot*tau0} )
 
-
-save(os.path.join(direc,filename+'_QoIs.mat'),{'time_qoi':time_qoi, 'ztip_qoi':ztip_qoi-ztip_qoi[0],\
-'Ttip_arr':Ttip_arr,'tip_uq':tip_uq,'cqois':cqois,'pri_spac':pri_spac,'sec_spac':sec_spac,'interfl':inter_len,\
-'fs_arr':fs_arr,'HCS':HCS,'Kc_ave':Kc_ave})
-
-# save('initial.mat',{'phi_ic':phi, 'U_ic':U, 'psi_ic':psi, 'tip_x':cur_tip_x, 'tip_z':cur_tip, 'zz_mv':zz_mv})
-
-'''
-save(os.path.join(direc,filename),{'order_param':order_param, 'conc':conc, 'xx':xx*W0, 'zz_mv':zz_mv*W0,'dt':dt*tau0,\
- 'nx':nx,'nz':nz,'Tend':(Mt*dt)*tau0,'walltime':end-start,'ztip':ztip_arr,'Tip':Ttip_arr,'inter_len':inter_len,'pri_spac':pri_spac,\
-    'sec_spac':sec_spac,'alpha':alpha_arr,'fs':fs_arr } )
-'''
