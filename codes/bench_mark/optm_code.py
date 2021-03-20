@@ -15,7 +15,7 @@ import sys
 import os
 import scipy.io as sio
 from scipy.io import savemat as save
-from numba import njit, cuda, vectorize, float64, float64, int32
+from numba import njit, cuda, vectorize, float32, float64, int32
 import numpy as np
 from numba.cuda.random import create_xoroshiro128p_states, xoroshiro128p_uniform_float64
 from numpy.random import random
@@ -249,8 +249,18 @@ def setBC_cpu(u,BCx,BCy):
 def rhs_psi(ps, ph, U, ps_new, ph_new, U_new, zz, dpsi, nt, rng_states):
     # ps = psi, ph = phi
 
+    # ==================================================
+    #
+    # 0. SHARED MEMORY LOAD
+    #
+    # ==================================================
+    # 2D: ps, ph, U (no halo needed); 1D: zz (no halo needed) 
+    
+
     i,j = cuda.grid(2)
     m,n = ps.shape
+
+    cuda.syncthreads()
     
     # thread on interior points
     if 0 < i < m-1 and 0 < j < n-1:
@@ -625,6 +635,7 @@ psi_old = cuda.to_device(psi_cpu)
 phi_old = cuda.to_device(phi_cpu)
 U_old   = cuda.to_device(U_cpu)
 
+print('c contiguous',psi_old.is_c_contiguous()); print('f contiguous',psi_old.is_f_contiguous());
 psi_new = cuda.device_array_like(psi_old)
 phi_new = cuda.device_array_like(phi_old)
 U_new = cuda.device_array_like(U_old)
@@ -665,15 +676,15 @@ for kt in range(int(Mt/2)):
     # time step: t = (2*nt) * dt
     # =================================================================
     rhs_psi[bpg2d, tpb2d](psi_old, phi_old, U_old, psi_new, phi_new, U_new, z_gpu, dPSI, 2*kt, rng_states)
-    setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
-    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_new, dPSI)
+#    setBC_gpu[bpg,tpb](psi_new, phi_new, U_old, dPSI)
+#    rhs_U[bpg2d, tpb2d](U_old, U_new, phi_new, dPSI)
 
     # =================================================================
     # time step: t = (2*nt+1) * dt
     # ================================================================= 
     rhs_psi[bpg2d, tpb2d](psi_new, phi_new, U_new, psi_old, phi_old, U_old, z_gpu, dPSI, 2*kt+1, rng_states)
-    setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
-    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
+#    setBC_gpu[bpg,tpb](psi_old, phi_old, U_new, dPSI)
+#    rhs_U[bpg2d, tpb2d](U_new, U_old, phi_old, dPSI) 
    
     # =================================================================
     # If moving frame flag is set to TRUE
