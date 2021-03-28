@@ -433,9 +433,10 @@ for ii in range(Mt):
     beta = random(psi.shape) - 0.5
     
     phi = phi + dt*dPSI + dt_sr*dxdz_in_sqrt*beta*eta
+    phi = set_BC(phi, 1, 1)
   
     U = U + dt*rhs_U(U,phi,dPSI)
-    
+    U = set_BC(U, 1, 1)    
     
     # =================================================================
     # If moving frame flag is set to TRUE
@@ -446,8 +447,8 @@ for ii in range(Mt):
         Ntip_arr[ii]=Ntip; ztip_arr[ii]=ztip
     
     # add boundary
-    phi = set_BC(phi, 1, 1)
-    U = set_BC(U, 1, 1)
+    #phi = set_BC(phi, 1, 1)
+    #U = set_BC(U, 1, 1)
     
  
     # update phi
