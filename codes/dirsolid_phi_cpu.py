@@ -177,7 +177,7 @@ def set_BC(u,BCx,BCy):
         
 
 @stencil
-def _rhs_psi(ps,ph,U,zz):
+def _rhs_psi(ph,U,zz):
 
     # ps = psi, ph = phi
     
@@ -188,10 +188,7 @@ def _rhs_psi(ps,ph,U,zz):
     # =============================================================
     
     # these ps's are defined on cell centers
-    psipjp=( ps[ 1, 1] + ps[ 0, 1] + ps[ 0, 0] + ps[ 1, 0] ) * 0.25
-    psipjm=( ps[ 1, 0] + ps[ 0, 0] + ps[ 0,-1] + ps[ 1,-1] ) * 0.25
-    psimjp=( ps[ 0, 1] + ps[-1, 1] + ps[-1, 0] + ps[ 0, 0] ) * 0.25
-    psimjm=( ps[ 0, 0] + ps[-1, 0] + ps[-1,-1] + ps[ 0,-1] ) * 0.25
+
     
     phipjp=( ph[ 1, 1] + ph[ 0, 1] + ph[ 0, 0] + ph[ 1, 0] ) * 0.25
     phipjm=( ph[ 1, 0] + ph[ 0, 0] + ph[ 0,-1] + ph[ 1,-1] ) * 0.25
@@ -201,51 +198,47 @@ def _rhs_psi(ps,ph,U,zz):
     # ============================
     # right edge flux
     # ============================
-    psx = ps[1,0]-ps[0,0]
-    psz = psipjp - psipjm
+
     phx = ph[1,0]-ph[0,0]
     phz = phipjp - phipjm
     
     A  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JR = A * ( A*psx - Ap*psz )
+    JR = A * ( A*phx - Ap*phz )
     
     # ============================
     # left edge flux
     # ============================
-    psx = ps[0,0]-ps[-1,0]
-    psz = psimjp - psimjm
+
     phx = ph[0,0]-ph[-1,0]
     phz = phimjp - phimjm
     
     A  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JL = A * ( A*psx - Ap*psz )
+    JL = A * ( A*phx - Ap*phz )
     
     # ============================
     # top edge flux
     # ============================
-    psx = psipjp - psimjp
-    psz = ps[0,1]-ps[0,0]
+
     phx = phipjp - phimjp
     phz = ph[0,1]-ph[0,0]
 
 
     A  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JT = A * ( A*psz + Ap*psx )
+    JT = A * ( A*phz + Ap*phx )
     
     # ============================
     # bottom edge flux
     # ============================
-    psx = psipjm - psimjm
-    psz = ps[0,0]-ps[0,-1]
+
     phx = phipjm - phimjm
     phz = ph[0,0]-ph[0,-1]
     
     A  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JB = A * ( A*psz + Ap*psx )
+    JB = A * ( A*phz + Ap*phx )
     
     
     
@@ -258,12 +251,11 @@ def _rhs_psi(ps,ph,U,zz):
     # d(phi)/dx  d(psi)/dx d(phi)/dz  d(psi)/dz at nodes (i,j)
     phxn = ( ph[ 1, 0] - ph[-1, 0] ) * 0.5
     phzn = ( ph[ 0, 1] - ph[ 0,-1] ) * 0.5
-    psxn = ( ps[ 1, 0] - ps[-1, 0] ) * 0.5
-    pszn = ( ps[ 0, 1] - ps[ 0,-1] ) * 0.5
+
     
     A2 = atheta(phxn,phzn)**2
-    gradps2 = (psxn)**2 + (pszn)**2
-    extra =  -sqrt2 * A2 * ph[0,0] * gradps2
+   # gradps2 = (psxn)**2 + (pszn)**2
+    extra = 0 # -sqrt2 * A2 * ph[0,0] * gradps2
     
 
     # =============================================================
@@ -275,7 +267,8 @@ def _rhs_psi(ps,ph,U,zz):
     Up = (zz[0,0] )/lT_tilde
     
     rhs_psi = ((JR-JL) + (JT-JB) + extra) * hi**2 + \
-               sqrt2*ph[0,0] - lamd*(1-ph[0,0]**2)*sqrt2*(U[0,0] + Up) 
+               - lamd* (1-ph[0,0]**2)**2 *(U[0,0] + Up) + \
+                   ph[0,0] - ph[0,0]**3
         
     
     # =============================================================
@@ -292,7 +285,7 @@ def _rhs_psi(ps,ph,U,zz):
 
 
 @stencil
-def _rhs_U(U,ph,psi_t):
+def _rhs_U(U,ph,phi_t):
     
     # define cell centered values
     phipjp=( ph[ 1, 1] + ph[ 0, 1] + ph[ 0, 0] + ph[ 1, 0] ) * 0.25
@@ -308,8 +301,8 @@ def _rhs_U(U,ph,psi_t):
     phn2 = phx**2 + phz**2
     nx = phx / np.sqrt(phn2) if (phn2 > eps) else 0.
     
-    jat    = 0.5*(1+(1-k)*U[0,0])*(1-ph[0,0]**2)*psi_t[0,0]
-    jat_ip = 0.5*(1+(1-k)*U[1,0])*(1-ph[1,0]**2)*psi_t[1,0]
+    jat    = (1+(1-k)*U[0,0])*phi_t[0,0]/sqrt2
+    jat_ip = (1+(1-k)*U[1,0])*phi_t[1,0]/sqrt2
         
     UR = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[1,0])*(U[1,0]-U[0,0]) + \
          0.5*(jat + jat_ip)*nx
@@ -323,7 +316,7 @@ def _rhs_U(U,ph,psi_t):
     phn2 = phx**2 + phz**2
     nx = phx / np.sqrt(phn2) if (phn2 > eps) else 0.
     
-    jat_im = 0.5*(1+(1-k)*U[-1,0])*(1-ph[-1,0]**2)*psi_t[-1,0]
+    jat_im = (1+(1-k)*U[-1,0])*phi_t[-1,0]/sqrt2
     
     UL = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[-1,0])*(U[0,0]-U[-1,0]) + \
          0.5*(jat + jat_im)*nx
@@ -337,7 +330,7 @@ def _rhs_U(U,ph,psi_t):
     phn2 = phx**2 + phz**2
     nz = phz / np.sqrt(phn2) if (phn2 > eps) else 0.
           
-    jat_jp = 0.5*(1+(1-k)*U[0,1])*(1-ph[0,1]**2)*psi_t[0,1]      
+    jat_jp = (1+(1-k)*U[0,1])*phi_t[0,1]/sqrt2      
     
     UT = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[0,1])*(U[0,1]-U[0,0]) + \
          0.5*(jat + jat_jp)*nz
@@ -351,7 +344,7 @@ def _rhs_U(U,ph,psi_t):
     phn2 = phx**2 + phz**2
     nz = phz / np.sqrt(phn2) if (phn2 > eps) else 0.
     
-    jat_jm = 0.5*(1+(1-k)*U[0,-1])*(1-ph[0,-1]**2)*psi_t[0,-1]      
+    jat_jm = (1+(1-k)*U[0,-1])*phi_t[0,-1]/sqrt2      
     
     UB = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[0,-1])*(U[0,0]-U[0,-1]) + \
          0.5*(jat + jat_jm)*nz
@@ -364,11 +357,11 @@ def _rhs_U(U,ph,psi_t):
     
 
 @njit(parallel=True)
-def rhs_psi(ps,ph,U,zz): return _rhs_psi(ps,ph,U,zz)
+def rhs_phi(ph,U,zz): return _rhs_psi(ph,U,zz)
 
 
 @njit(parallel=True)
-def rhs_U(U,ph,psi_t): return _rhs_U(U,ph,psi_t)
+def rhs_U(U,ph,phi_t): return _rhs_U(U,ph,phi_t)
 
 
 
@@ -418,7 +411,7 @@ order_param[:,[0]], conc[:,[0]] = save_data(phi,U)
 
 # For all numba routines to JIT-compile
 start = time.time()
-dPSI = rhs_psi(psi, phi, U, zz)
+dPSI = rhs_phi(phi, U, zz)
 dPSI = set_BC(dPSI, 0, 1)
 dU = rhs_U(U,phi,dPSI)
 end = time.time()
@@ -432,13 +425,13 @@ start = time.time()
 
 for ii in range(Mt):
 
-    dPSI = rhs_psi(psi, phi, U, zz - R_tilde*t)
+    dPSI = rhs_phi(phi, U, zz - R_tilde*t)
 
     dPSI = set_BC(dPSI, 0, 1)
     
     beta = random(psi.shape) - 0.5
     
-    psi = psi + dt*dPSI + dt_sr*dxdz_in_sqrt*beta*eta
+    phi = phi + dt*dPSI + dt_sr*dxdz_in_sqrt*beta*eta
   
     U = U + dt*rhs_U(U,phi,dPSI)
     
@@ -452,12 +445,12 @@ for ii in range(Mt):
         Ntip_arr[ii]=Ntip; ztip_arr[ii]=ztip
     
     # add boundary
-    psi = set_BC(psi, 0, 1)
+    phi = set_BC(phi, 0, 1)
     U = set_BC(U, 0, 1)
     
  
     # update phi
-    phi = np.tanh(psi/sqrt2) 
+    #phi = np.tanh(psi/sqrt2) 
     t += dt
     
     
