@@ -37,13 +37,13 @@ lx = lxd/W0
 lz = aratio*lx
 
 nz = int(aratio*nx+1)
-
+nx = nx+1
 nv= nz*nx #number of variables
-dx = lx/nx
+dx = lx/(nx-1)
 dz = lz/(nz-1)
+print("mesh dx,dz",dx,dz)
 
-
-x = np.linspace(0,lx-dx,nx)
+x = np.linspace(0,lx,nx)
 z = np.linspace(0,lz,nz)
 
 zz,xx = np.meshgrid(z,x)
