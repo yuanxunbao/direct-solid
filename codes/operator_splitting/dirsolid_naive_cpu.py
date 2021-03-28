@@ -22,6 +22,7 @@ delta, k, lamd, R_tilde, Dl_tilde, lT_tilde, W0, tau0, c_infty, G, R = PARA.phys
 eps, alpha0, lxd, aratio, nx, dt, Mt, eta, seed, U_0, nts, filename, direc, \
 mvf, Nset, ictype  = PARA.simu_para(W0,Dl_tilde)
 
+k=1
 alpha0 = alpha0*math.pi/180
 
 cosa = np.cos(alpha0)
@@ -264,7 +265,7 @@ def _rhs_psi(ph,U,zz):
     # 
     # =============================================================
     
-    Up = (zz[0,0] )/lT_tilde
+    Up = 0 #(zz[0,0] )/lT_tilde
     
     rhs_psi = ((JR-JL) + (JT-JB) + extra) * hi**2 + \
                - lamd* (1-ph[0,0]**2)**2 *(U[0,0] + Up) + \
@@ -306,7 +307,7 @@ def _rhs_U(U,ph,phi_t):
         
     UR = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[1,0])*(U[1,0]-U[0,0]) + \
          0.5*(jat + jat_ip)*nx
-         
+    UR = hi*Dl_tilde*  (U[1,0]-U[0,0])   
          
     # ============================
     # left edge flux (i-1/2, j)
@@ -320,7 +321,7 @@ def _rhs_U(U,ph,phi_t):
     
     UL = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[-1,0])*(U[0,0]-U[-1,0]) + \
          0.5*(jat + jat_im)*nx
-         
+    UL = hi*Dl_tilde*  (U[0,0]-U[-1,0])   
          
     # ============================
     # top edge flux (i, j+1/2)
@@ -334,7 +335,7 @@ def _rhs_U(U,ph,phi_t):
     
     UT = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[0,1])*(U[0,1]-U[0,0]) + \
          0.5*(jat + jat_jp)*nz
-         
+    UT = hi*Dl_tilde*  (U[0,1]-U[0,0])     
          
     # ============================
     # top edge flux (i, j-1/2)
@@ -348,7 +349,7 @@ def _rhs_U(U,ph,phi_t):
     
     UB = hi*Dl_tilde*0.5*(2 - ph[0,0] - ph[0,-1])*(U[0,0]-U[0,-1]) + \
          0.5*(jat + jat_jm)*nz
-    
+    UB = hi*Dl_tilde*  (U[0,0]-U[0,-1])
     rhs_U = ( (UR-UL) + (UT-UB) ) * hi + sqrt2 * jat
     tau_U = (1+k) - (1-k)*ph[0,0]
     
