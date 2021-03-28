@@ -380,8 +380,8 @@ def save_data(phi,U):
 if ictype == 0:
 
     psi0 = PARA.seed_initial(xx,lx,zz)
-    U0 = 0*psi0 + U_0
     phi0 = np.tanh(psi0/sqrt2)
+    U0 = U_0*(phi0<=0)  ## for specific case in the paper
 
 elif ictype == 1:
 
@@ -404,16 +404,16 @@ psi = set_halo(psi0)
 U = set_halo(U0)
 zz = set_halo(zz)
 
-psi = set_BC(psi, 0, 1)
+psi = set_BC(psi, 1, 1)
 phi = np.tanh(psi/sqrt2)   # expensive replace
-U =   set_BC(U, 0, 1)
+U =   set_BC(U, 1, 1)
 order_param[:,[0]], conc[:,[0]] = save_data(phi,U)
 
 
 # For all numba routines to JIT-compile
 start = time.time()
 dPSI = rhs_phi(phi, U, zz)
-dPSI = set_BC(dPSI, 0, 1)
+dPSI = set_BC(dPSI, 1, 1)
 dU = rhs_U(U,phi,dPSI)
 end = time.time()
 
@@ -428,7 +428,7 @@ for ii in range(Mt):
 
     dPSI = rhs_phi(phi, U, zz - R_tilde*t)
 
-    dPSI = set_BC(dPSI, 0, 1)
+    dPSI = set_BC(dPSI, 1, 1)
     
     beta = random(psi.shape) - 0.5
     
@@ -446,8 +446,8 @@ for ii in range(Mt):
         Ntip_arr[ii]=Ntip; ztip_arr[ii]=ztip
     
     # add boundary
-    phi = set_BC(phi, 0, 1)
-    U = set_BC(U, 0, 1)
+    phi = set_BC(phi, 1, 1)
+    U = set_BC(U, 1, 1)
     
  
     # update phi
