@@ -15,6 +15,8 @@ import math
 from numpy.random import random
 import time
 import copy
+from scipy import sparse as sp
+from scipy.sparse import linalg as spla
 
 PARA = importlib.import_module(sys.argv[1])
 #import dsinput as PARA
@@ -66,6 +68,56 @@ np.random.seed(seed)
 Ntip=1
 Ntip_arr= np.zeros(Mt)
 ztip_arr= np.zeros(Mt)
+
+def sparse_cg(A, b, u0, TOL, P, maxit):
+
+      num_iters = 0
+
+      def callback(xk):
+         nonlocal num_iters
+         num_iters+=1
+
+      x,status = spla.cg(A, b, x0=u0, tol=TOL, M=P, maxiter = maxit, callback=callback)
+      return x,status,num_iters
+
+def sparse_laplacian(nx,ny):
+    
+    # Neumann BC Laplacian
+    Ix = sp.eye(nx,format='csc'); Iy = sp.eye(ny,format='csc')
+    Ix[0,0] = 0.5; Ix[-1,-1] = 0.5
+    Iy[0,0] = 0.5; Iy[-1,-1] = 0.5
+    
+
+
+    Dxx = sp.diags([1, -2, 1], [-1, 0, 1], shape=(nx, nx)).toarray()
+    Dxx[0,1]=2; Dxx[-1,-2]=2
+
+    Dyy = sp.diags([1, -2, 1], [-1, 0, 1], shape=(ny, ny)).toarray()
+    Dyy[0,1]=2; Dyy[-1,-2]=2
+
+
+    # L = sp.kronsum(Dyy,Dxx,format='csc')
+    L = sp.kronsum(Dxx,Dyy,format='csc')
+
+    Q = sp.kron(Ix,Iy,format='csc')
+    # Q = sp.kron(Ix,Iy,format='csc')
+    
+    return L,Q
+
+def export_mat(CFL, nx, nz):
+    
+    Lap,Q = sparse_laplacian(nx, nz)
+    I = sp.eye(nx * nz,format='csc')
+    
+    A0 = Q @ ( I - CFL*Lap)
+
+    # preconditioner
+    M2 = spla.splu(A0)
+    M_x = lambda x: M2.solve(x)
+    M = spla.LinearOperator((nv,nv), M_x)
+
+    return Lap, Q, I, A0, M
+
 
 def move_frame(Ntip, psi, phi, U, zz):
     
@@ -174,7 +226,7 @@ def set_BC(u,BCx,BCy):
         u[:,-1] = u[:,-3]
         
         
-    return u
+    #return u
         
         
 
@@ -415,9 +467,9 @@ phi_old = copy.deepcopy(phi)
 
 # For all numba routines to JIT-compile
 start = time.time()
-dPSI = rhs_phi(phi, U, zz)
+dPSI = rhs_phi(phi, phi_old, U, zz)
 dPSI = set_BC(dPSI, 1, 1)
-dU = rhs_U(U,phi,dPSI)
+#dU = rhs_U(U,phi,dPSI)
 end = time.time()
 
 print('compile time: ', end - start )
@@ -425,6 +477,13 @@ print('compile time: ', end - start )
 print(psi.shape)
 
 kts = int(Mt/nts)
+
+CFL = dt*hi**2  #CFL number
+CFL2 = Dl_tilde*CFL
+
+Lap, Q, I, A0, M = export_mat(CFL,nx,nz)
+Lap, Q, I, A0D, MD = export_mat(CFL2,nx,nz)
+
 start = time.time()
 
 for ii in range(Mt):
@@ -441,10 +500,14 @@ for ii in range(Mt):
     #beta = random(psi.shape) - 0.5    
     #phi = phi + dt*dPSI #+ dt_sr*dxdz_in_sqrt*beta*eta
 # step2: set BC for phi and A2(for halos)
-    phi = set_BC(phi, 1, 1)
-    A2 = set_BC(A2, 1, 1)
+    set_BC(phi, 1, 1)
+    set_BC(A2, 1, 1)
 # step3: implicit heat kernel (no flux BCs)
-
+    u = np.reshape(phi[1:-1,1:-1],     (nv,1), order='F')
+    unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
+    print("phi heat solve", num_iter)
+    phi[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
+    set_BC(phi, 1, 1)
 # step4: analytic solution update
 
     phi = phi/np.sqrt(phi**2+ (1-phi**2)*np.exp(-2*dt/A2))
@@ -457,10 +520,14 @@ for ii in range(Mt):
 # step 1: explicit update of phi coupling
     #U = U + dt*rhs_U(U,phi,dPSI)
     #U = set_BC(U, 1, 1)    
-    U += 0.5*(phi-phi_old) 
+    U += 0.5*(phi-phi_old)
 
 # step 2: implicit heat kernel with constant diffusion D(no flux)
-    
+    u = np.reshape(U[1:-1,1:-1],     (nv,1), order='F')
+    unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
+    print("U heat solve", num_iter)
+    U[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
+    set_BC(U, 1, 1)
 
 
     # =================================================================
@@ -479,7 +546,7 @@ for ii in range(Mt):
     # update phi
     #phi = np.tanh(psi/sqrt2) 
     t += dt
-    
+    phi_old = copy.deepcopy(phi)
     
     if (ii+1)%kts==0:     # data saving 
        
