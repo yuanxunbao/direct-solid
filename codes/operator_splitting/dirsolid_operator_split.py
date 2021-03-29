@@ -333,7 +333,7 @@ def _rhs_psi(ph_new,ph,U,zz):
     tp = (1-(1-k)*Up)
     tau_psi = tp*A2 if tp >= k else k*A2
     # update nonlinear term to the ph_new variable, save ph for U
-    ph_new[0,0] = ph[0,0] + dt*rhs_psi/tau_psi  
+    #ph_new[0,0] = ph[0,0] + dt*rhs_psi/tau_psi  
     # return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
     return A2 
 
@@ -458,9 +458,9 @@ psi = set_halo(psi0)
 U = set_halo(U0)
 zz = set_halo(zz)
 
-psi = set_BC(psi, 1, 1)
+set_BC(psi, 1, 1)
 phi = np.tanh(psi/sqrt2)   # expensive replace
-U =   set_BC(U, 1, 1)
+set_BC(U, 1, 1)
 order_param[:,[0]], conc[:,[0]] = save_data(phi,U)
 
 phi_old = copy.deepcopy(phi)
@@ -468,7 +468,7 @@ phi_old = copy.deepcopy(phi)
 # For all numba routines to JIT-compile
 start = time.time()
 dPSI = rhs_phi(phi, phi_old, U, zz)
-dPSI = set_BC(dPSI, 1, 1)
+set_BC(dPSI, 1, 1)
 #dU = rhs_U(U,phi,dPSI)
 end = time.time()
 
