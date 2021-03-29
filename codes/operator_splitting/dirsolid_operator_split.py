@@ -228,10 +228,17 @@ def set_BC(u,BCx,BCy):
         
     #return u
         
-        
+@stencil
+def _aniso(ph):
+    phxn = ( ph[ 1, 0] - ph[-1, 0] ) * 0.5
+    phzn = ( ph[ 0, 1] - ph[ 0,-1] ) * 0.5
+
+    A = atheta(phxn,phzn)
+    return A
+    
 
 @stencil
-def _rhs_psi(ph_new,ph,U,zz):
+def _rhs_psi(A,ph,U,zz):
 
     # ps = psi, ph = phi
     
@@ -306,10 +313,10 @@ def _rhs_psi(ph_new,ph,U,zz):
     phxn = ( ph[ 1, 0] - ph[-1, 0] ) * 0.5
     phzn = ( ph[ 0, 1] - ph[ 0,-1] ) * 0.5
 
-    A = atheta(phxn,phzn)
-    A2 = A**2
+    #A = atheta(phxn,phzn)
+    A2 = A[0,0]**2
    # gradps2 = (psxn)**2 + (pszn)**2
-    extra = 2*A*( (AR-AL)*phxn + (AT-AB)*phzn ) # -sqrt2 * A2 * ph[0,0] * gradps2
+    extra = 2*A[0,0]*( (AR-AL)*phxn + (AT-AB)*phzn ) # -sqrt2 * A2 * ph[0,0] * gradps2
     
 
     # =============================================================
@@ -335,7 +342,7 @@ def _rhs_psi(ph_new,ph,U,zz):
     # update nonlinear term to the ph_new variable, save ph for U
     #ph_new[0,0] = ph[0,0] + dt*rhs_psi/tau_psi  
     # return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
-    return A2 
+    return rhs_psi/tau_psi 
 
 
 
@@ -414,6 +421,8 @@ def _rhs_U(U,ph,phi_t):
 @njit(parallel=True)
 def rhs_phi(ph_new,ph,U,zz): return _rhs_psi(ph_new,ph,U,zz)
 
+@njit(parallel=True)
+def aniso(ph): return _aniso(ph)
 
 @njit(parallel=True)
 def rhs_U(U,ph,phi_t): return _rhs_U(U,ph,phi_t)
@@ -494,14 +503,15 @@ for ii in range(Mt):
 
 #==========================================================
 # step 1: explicit euler of nonlinear term (for inside)
-    A2 = rhs_phi(phi, phi_old, U, zz - R_tilde*t)
+    A = aniso(phi_old)
+    phi += dt* rhs_phi(A, phi_old, U, zz - R_tilde*t)
 
     #dPSI = set_BC(dPSI, 1, 1)    
     #beta = random(psi.shape) - 0.5    
     #phi = phi + dt*dPSI #+ dt_sr*dxdz_in_sqrt*beta*eta
 # step2: set BC for phi and A2(for halos)
     set_BC(phi, 1, 1)
-    set_BC(A2, 1, 1)
+    set_BC(A, 1, 1)
 # step3: implicit heat kernel (no flux BCs)
     u = np.reshape(phi[1:-1,1:-1],     (nv,1), order='F')
     unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
@@ -510,7 +520,7 @@ for ii in range(Mt):
     set_BC(phi, 1, 1)
 # step4: analytic solution update
 
-    phi = phi/np.sqrt(phi**2+ (1-phi**2)*np.exp(-2*dt/A2))
+    phi = phi/np.sqrt(phi**2+ (1-phi**2)*np.exp(-2*dt/A**2))
     
 #==========================================================
 
