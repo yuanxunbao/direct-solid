@@ -514,8 +514,8 @@ for ii in range(Mt):
     set_BC(A, 1, 1)
 # step3: implicit heat kernel (no flux BCs)
     u = np.reshape(phi[1:-1,1:-1],     (nv,1), order='F')
-    unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
-    print("phi heat solve", num_iter)
+    unew = M@(Q@u) #unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
+    #print("phi heat solve", num_iter)
     phi[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
     set_BC(phi, 1, 1)
 # step4: analytic solution update
@@ -534,8 +534,8 @@ for ii in range(Mt):
 
 # step 2: implicit heat kernel with constant diffusion D(no flux)
     u = np.reshape(U[1:-1,1:-1],     (nv,1), order='F')
-    unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
-    print("U heat solve", num_iter)
+    unew = MD@(Q@u) #unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
+    #print("U heat solve", num_iter)
     U[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
     set_BC(U, 1, 1)
 
