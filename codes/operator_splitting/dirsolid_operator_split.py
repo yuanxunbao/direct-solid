@@ -14,6 +14,7 @@ import numpy as np
 import math
 from numpy.random import random
 import time
+import copy
 
 PARA = importlib.import_module(sys.argv[1])
 #import dsinput as PARA
@@ -37,13 +38,13 @@ lx = lxd/W0
 lz = aratio*lx
 
 nz = int(aratio*nx+1)
-
+nx = nx+1
 nv= nz*nx #number of variables
-dx = lx/nx
+dx = lx/(nx-1)
 dz = lz/(nz-1)
+print("mesh dx,dz",dx,dz)
 
-
-x = np.linspace(0,lx-dx,nx)
+x = np.linspace(0,lx,nx)
 z = np.linspace(0,lz,nz)
 
 zz,xx = np.meshgrid(z,x)
@@ -178,7 +179,7 @@ def set_BC(u,BCx,BCy):
         
 
 @stencil
-def _rhs_psi(ph,U,zz):
+def _rhs_psi(ph_new,ph,U,zz):
 
     # ps = psi, ph = phi
     
@@ -279,9 +280,10 @@ def _rhs_psi(ph,U,zz):
     # =============================================================
     tp = (1-(1-k)*Up)
     tau_psi = tp*A2 if tp >= k else k*A2
-
+    # update nonlinear term to the ph_new variable, save ph for U
+    ph_new[0,0] = ph[0,0] + dt*rhs_psi/tau_psi  
     # return rhs_psi/tau_psi + eta*(random()-0.5)/dt_sr*hi
-    return rhs_psi/tau_psi
+    return A2 
 
 
 
@@ -358,7 +360,7 @@ def _rhs_U(U,ph,phi_t):
     
 
 @njit(parallel=True)
-def rhs_phi(ph,U,zz): return _rhs_psi(ph,U,zz)
+def rhs_phi(ph_new,ph,U,zz): return _rhs_psi(ph_new,ph,U,zz)
 
 
 @njit(parallel=True)
@@ -409,6 +411,7 @@ phi = np.tanh(psi/sqrt2)   # expensive replace
 U =   set_BC(U, 1, 1)
 order_param[:,[0]], conc[:,[0]] = save_data(phi,U)
 
+phi_old = copy.deepcopy(phi)
 
 # For all numba routines to JIT-compile
 start = time.time()
@@ -426,18 +429,40 @@ start = time.time()
 
 for ii in range(Mt):
 
-    dPSI = rhs_phi(phi, U, zz - R_tilde*t)
+#==========================================================
 
-    dPSI = set_BC(dPSI, 1, 1)
-    
-    beta = random(psi.shape) - 0.5
-    
-    phi = phi + dt*dPSI + dt_sr*dxdz_in_sqrt*beta*eta
+                   # phi kernels    
+
+#==========================================================
+# step 1: explicit euler of nonlinear term (for inside)
+    A2 = rhs_phi(phi, phi_old, U, zz - R_tilde*t)
+
+    #dPSI = set_BC(dPSI, 1, 1)    
+    #beta = random(psi.shape) - 0.5    
+    #phi = phi + dt*dPSI #+ dt_sr*dxdz_in_sqrt*beta*eta
+# step2: set BC for phi and A2(for halos)
     phi = set_BC(phi, 1, 1)
-  
-    U = U + dt*rhs_U(U,phi,dPSI)
-    U = set_BC(U, 1, 1)    
+    A2 = set_BC(A2, 1, 1)
+# step3: implicit heat kernel (no flux BCs)
+
+# step4: analytic solution update
+
+    phi = phi/np.sqrt(phi**2+ (1-phi**2)*np.exp(-2*dt/A2))
     
+#==========================================================
+
+                   # U kernels    
+
+#==========================================================
+# step 1: explicit update of phi coupling
+    #U = U + dt*rhs_U(U,phi,dPSI)
+    #U = set_BC(U, 1, 1)    
+    U += 0.5*(phi-phi_old) 
+
+# step 2: implicit heat kernel with constant diffusion D(no flux)
+    
+
+
     # =================================================================
     # If moving frame flag is set to TRUE
     # =================================================================
