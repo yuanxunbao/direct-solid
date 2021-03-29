@@ -204,9 +204,9 @@ def _rhs_psi(ph_new,ph,U,zz):
     phx = ph[1,0]-ph[0,0]
     phz = phipjp - phipjm
     
-    A  = atheta( phx,phz)
+    AR  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JR = A * ( A*phx - Ap*phz )
+    JR = AR * (  - Ap*phz )
     
     # ============================
     # left edge flux
@@ -215,9 +215,9 @@ def _rhs_psi(ph_new,ph,U,zz):
     phx = ph[0,0]-ph[-1,0]
     phz = phimjp - phimjm
     
-    A  = atheta( phx,phz)
+    AL  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JL = A * ( A*phx - Ap*phz )
+    JL = AL * (  - Ap*phz )
     
     # ============================
     # top edge flux
@@ -227,9 +227,9 @@ def _rhs_psi(ph_new,ph,U,zz):
     phz = ph[0,1]-ph[0,0]
 
 
-    A  = atheta( phx,phz)
+    AT  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JT = A * ( A*phz + Ap*phx )
+    JT = AT * (  Ap*phx )
     
     # ============================
     # bottom edge flux
@@ -238,9 +238,9 @@ def _rhs_psi(ph_new,ph,U,zz):
     phx = phipjm - phimjm
     phz = ph[0,0]-ph[0,-1]
     
-    A  = atheta( phx,phz)
+    AB  = atheta( phx,phz)
     Ap = aptheta(phx,phz)
-    JB = A * ( A*phz + Ap*phx )
+    JB = AB * (  Ap*phx )
     
     
     
@@ -254,10 +254,10 @@ def _rhs_psi(ph_new,ph,U,zz):
     phxn = ( ph[ 1, 0] - ph[-1, 0] ) * 0.5
     phzn = ( ph[ 0, 1] - ph[ 0,-1] ) * 0.5
 
-    
-    A2 = atheta(phxn,phzn)**2
+    A = atheta(phxn,phzn)
+    A2 = A**2
    # gradps2 = (psxn)**2 + (pszn)**2
-    extra = 0 # -sqrt2 * A2 * ph[0,0] * gradps2
+    extra = 2*A*( (AR-AL)*phxn + (AT-AB)*phzn ) # -sqrt2 * A2 * ph[0,0] * gradps2
     
 
     # =============================================================
