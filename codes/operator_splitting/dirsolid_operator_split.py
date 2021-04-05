@@ -492,7 +492,8 @@ CFL2 = Dl_tilde*CFL
 
 Lap, Q, I, A0, M = export_mat(CFL,nx,nz)
 Lap, Q, I, A0D, MD = export_mat(CFL2,nx,nz)
-
+time9=0;time8=0;time7=0;time_reshape=0
+time1=0;time2=0;time3=0;time4=0;time5=0;time6=0;time0=0;
 start = time.time()
 
 for ii in range(Mt):
@@ -503,42 +504,47 @@ for ii in range(Mt):
 
 #==========================================================
 # step 1: explicit euler of nonlinear term (for inside)
+    clock7 = time.time()
     A = aniso(phi_old)
     phi += dt* rhs_phi(A, phi_old, U, zz - R_tilde*t)
-
+    clock0 = time.time(); time0+=clock0-clock7
     #dPSI = set_BC(dPSI, 1, 1)    
     #beta = random(psi.shape) - 0.5    
     #phi = phi + dt*dPSI #+ dt_sr*dxdz_in_sqrt*beta*eta
 # step2: set BC for phi and A2(for halos)
     set_BC(phi, 1, 1)
     set_BC(A, 1, 1)
+    clock1 = time.time();time1+=clock1-clock0
 # step3: implicit heat kernel (no flux BCs)
     u = np.reshape(phi[1:-1,1:-1],     (nv,1), order='F')
-    unew = M@(Q@u) #unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
+    clock8= time.time();time7+= clock8-clock1 
+    unew,stat,num_iter = sparse_cg(A0, Q@u, u, 1e-8, M, 80)
+    clock9= time.time();time8+= clock9-clock8
     #print("phi heat solve", num_iter)
     phi[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
     set_BC(phi, 1, 1)
+    clock2 = time.time(); time2 +=clock2-clock1
 # step4: analytic solution update
 
     phi = phi/np.sqrt(phi**2+ (1-phi**2)*np.exp(-2*dt/A**2))
-    
+    clock3 = time.time(); time3 +=clock3-clock2
 #==========================================================
 
                    # U kernels    
 
 #==========================================================
-# step 1: explicit update of phi coupling
+# step 5: explicit update of phi coupling
     #U = U + dt*rhs_U(U,phi,dPSI)
     #U = set_BC(U, 1, 1)    
     U += 0.5*(phi-phi_old)
-
-# step 2: implicit heat kernel with constant diffusion D(no flux)
+    clock4 = time.time(); time4 +=clock4-clock3
+# step 6: implicit heat kernel with constant diffusion D(no flux)
     u = np.reshape(U[1:-1,1:-1],     (nv,1), order='F')
-    unew = MD@(Q@u) #unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
+    unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
     #print("U heat solve", num_iter)
     U[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
     set_BC(U, 1, 1)
-
+    clock5 = time.time(); time5+=clock5-clock4
 
     # =================================================================
     # If moving frame flag is set to TRUE
@@ -555,9 +561,11 @@ for ii in range(Mt):
  
     # update phi
     #phi = np.tanh(psi/sqrt2) 
+# step 7: update phi_old 
     t += dt
     phi_old = copy.deepcopy(phi)
-    
+    clock6 = time.time(); time6 += clock6-clock5
+
     if (ii+1)%kts==0:     # data saving 
        
         print('time step = ', (ii+1) )
@@ -570,8 +578,8 @@ end = time.time()
 
 
 print('elapsed: ', end - start )
-
-
+print(time0,time1,time2,time3, time4, time5, time6)
+print('reshape and cg', time7,time8,(time2-time7-time8))
 Uf = U[1:-1,1:-1]
 
 save(os.path.join(direc,filename),{'xx':xx*W0,'zz':zz[1:-1,1:-1]*W0,'order_param':order_param,'conc':conc,'Ntip':Ntip_arr,'ztip':ztip_arr,'dt':dt*tau0,'nx':nx,'nz':nz,'Tend':t*tau0,'walltime':end-start,'dPSI':dPSI})
