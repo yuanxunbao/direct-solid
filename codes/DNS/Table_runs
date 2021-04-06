@@ -9,7 +9,7 @@ WD_deep         3100          0.08          20
 # line model and transient
 
 	    domain_width(um)   dt_coeff       line_id      angles    Grids   aspect-ratio transient_run_W0/time_steps
-		  3              0.12          2,9,17                             4              0.2/6000 
+		  3              0.12          2,7,17                             4              0.2/6000 
 		  4              0.12          4,15,27				  4		 0.05/20000
 		  80              0.8          2,7,12				  4		 1/60000
 		  60              0.8          4,16,26				  4
