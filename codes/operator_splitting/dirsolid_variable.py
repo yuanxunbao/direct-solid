@@ -130,8 +130,8 @@ def amgx_var_coeff(sol, rhs, Mat):
 
   b.upload(rhs)
   x.upload(sol)
-  pyamgx.Matrix.replace_coefficients()
-  solver.setup(A)
+  B.replace_coefficients(Mat)
+  solver2.setup(B)
   solver2.solve(b, x)#, zero_initial_guess=True)
 
   # Download solution
@@ -224,6 +224,7 @@ def export_mat(CFL, nx, nz):
     M = spla.LinearOperator((nv,nv), M_x)
 
     return Lap, Q, I, A0, M
+
 
 
 def move_frame(Ntip, psi, phi, U, zz):
@@ -595,10 +596,10 @@ print(psi.shape)
 kts = int(Mt/nts)
 
 CFL = dt*hi**2  #CFL number
-CFL2 = Dl_tilde*CFL
+CFL2 = Dl_tilde*CFL/2
 
 Lap, Q, I, A0, M = export_mat(CFL,nx,nz)
-Lap, Q, I, A0D, MD = export_mat(CFL2,nx,nz)
+
 time9=0;time8=0;time7=0;time_reshape=0
 time1=0;time2=0;time3=0;time4=0;time5=0;time6=0;time0=0;
 
@@ -609,7 +610,7 @@ time1=0;time2=0;time3=0;time4=0;time5=0;time6=0;time0=0;
 #sol = np.zeros(5, dtype=np.float64)
 unew = np.zeros((nv)); phi_new = np.zeros((nv));
 A.upload_CSR(A0)
-B.upload_CSR(A0D)
+B.upload_CSR(I-CFL2*sparse_var_coeffi_laplacian(phi, nx, nz))
 solver.setup(A)
 start = time.time()
 
@@ -658,7 +659,8 @@ for ii in range(Mt):
     clock4 = time.time(); time4 +=clock4-clock3
 # step 6: implicit heat kernel with constant diffusion D(no flux)
     u = np.reshape(U[1:-1,1:-1],     (nv,1), order='F')
-    unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
+    #unew,stat,num_iter = sparse_cg(A0D, Q@u, u, 1e-8, MD, 80)
+    amgx_var_coeff(unew, u, I-CFL2*sparse_var_coeffi_laplacian(phi, nx, nz))
     #print("U heat solve", num_iter)
     U[1:-1,1:-1] = np.reshape(unew, (nx, nz), order='F')
     set_BC(U, 1, 1)
