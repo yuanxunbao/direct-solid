@@ -29,6 +29,8 @@ LOAD PARAMETERS
 '''
 if len(sys.argv)==3:
     delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name, angle  = PARA.phys_para(sys.argv[2])
+elif len(sys.argv)==5:
+    delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name, angle, tid, gid  = PARA.phys_para(sys.argv[2],sys.argv[3],sys.argv[4])
 else: delta, k, lamd, Dl_tilde, W0, tau0, c_inf, m_slope, Ti, U_0, Gt, Rt, t_macro, ext_name, angle  = PARA.phys_para()
 
 print(t_macro.shape)
@@ -52,9 +54,11 @@ lxd = lx * W0
 
 mph = 'cell' if eta ==0.0 else 'dendrite'
 
-filename = 'dirsolid_varGR_' + ext_name + str('%4.2F'%angle) + '_noise'+ \
+filename = 'dirsolid_varGR_' + ext_name + str('%4.2F'%angle) + '_tid'+str(tid) + '_gid'+str(gid) + '_noise'+ \
 str('%4.2F'%eta)+'_misori'+str(alpha0)+'_lx'+ str('%4.2F'%lxd)+'_nx'+str('%d'%nx)+'_asp'+str(aratio)+ \
 '_ictype'+ str('%d'%ictype) + '_U0'+str('%4.2F'%U_0)+'seed'+str(seed_val)
+
+print(filename)
 
 
 '''
